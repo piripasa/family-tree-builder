@@ -15,6 +15,15 @@ export function displayName(person: Person): string {
   return name || "Unnamed";
 }
 
+export function lifeSpan(person: Person): string {
+  const birth = yearOf(person.birthDate);
+  const death = yearOf(person.deathDate);
+  if (birth && death) return `${birth}–${death}`;
+  if (birth) return `b. ${birth}`;
+  if (death) return `d. ${death}`;
+  return "";
+}
+
 export function getPerson(doc: TreeDocument, personId: string): Person | undefined {
   return doc.people.find((person) => person.id === personId);
 }
@@ -136,14 +145,11 @@ export function addFirstPerson(
 export function updatePerson(
   doc: TreeDocument,
   personId: string,
-  givenName: string,
-  familyName: string,
+  patch: Partial<Omit<Person, "id">>,
 ): TreeDocument {
   return {
     ...doc,
-    people: doc.people.map((person) =>
-      person.id === personId ? { ...person, givenName, familyName } : person,
-    ),
+    people: doc.people.map((person) => (person.id === personId ? applyPersonPatch(person, patch) : person)),
   };
 }
 
@@ -372,6 +378,22 @@ function replacementFocus(doc: TreeDocument, personId: string): string | null {
   const parent = parentsOf(doc, personId)[0];
   if (parent) return parent.id;
   return null;
+}
+
+function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): Person {
+  const next: Person = { ...person, ...patch };
+  for (const key of ["birthDate", "deathDate", "birthPlace", "deathPlace", "note"] as const) {
+    const value = next[key]?.trim();
+    if (value) next[key] = value;
+    else delete next[key];
+  }
+  if (!next.photo) delete next.photo;
+  return next;
+}
+
+function yearOf(value: string | undefined): string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  return value.slice(0, 4);
 }
 
 function fail(error: string): TreeResult {

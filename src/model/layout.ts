@@ -2,7 +2,7 @@ import { parentPartnershipOf, partnershipsAsPartner } from "./tree";
 import type { TreeDocument } from "./types";
 
 export const CARD_WIDTH = 176;
-export const CARD_HEIGHT = 78;
+export const CARD_HEIGHT = 92;
 export const MAX_GENERATIONS = 4;
 
 const SIBLING_GAP = 36;

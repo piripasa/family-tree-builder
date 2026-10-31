@@ -2,6 +2,12 @@ export type Person = {
   id: string;
   givenName: string;
   familyName: string;
+  photo?: string;
+  birthDate?: string;
+  birthPlace?: string;
+  deathDate?: string;
+  deathPlace?: string;
+  note?: string;
 };
 
 export type Partnership = {

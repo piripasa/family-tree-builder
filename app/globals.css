@@ -213,6 +213,7 @@ h2,
 
 .field input:focus,
 .field select:focus,
+.field textarea:focus,
 button:focus-visible,
 .person-card:focus-visible {
   outline: 2px solid var(--forest);
@@ -376,9 +377,50 @@ button:focus-visible,
   fill: var(--ink);
 }
 
-.card-family {
+.card-family,
+.card-span {
   font-size: 13px;
   fill: var(--muted);
+}
+
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.photo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-deep);
+  flex: none;
+}
+
+.photo-preview.empty {
+  border: 1px dashed var(--edge);
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.field textarea {
+  border: 1px solid var(--edge);
+  background: white;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  color: var(--ink);
+  resize: vertical;
 }
 
 .more-mark {

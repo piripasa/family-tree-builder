@@ -32,8 +32,10 @@ export function parseTreeDocument(input: unknown): ParseResult {
     if (typeof entry.givenName !== "string" || typeof entry.familyName !== "string") {
       return fail("A person in that file has an unreadable name.");
     }
+    const profile = readProfile(entry);
+    if (!("fields" in profile)) return profile;
     seenPeople.add(entry.id);
-    people.push({ id: entry.id, givenName: entry.givenName, familyName: entry.familyName });
+    people.push({ id: entry.id, givenName: entry.givenName, familyName: entry.familyName, ...profile.fields });
   }
 
   const partnerships: Partnership[] = [];
@@ -100,6 +102,56 @@ export function parseTreeDocument(input: unknown): ParseResult {
   }
 
   return { ok: true, document };
+}
+
+function readProfile(
+  entry: Record<string, unknown>,
+): { ok: true; fields: Partial<Person> } | ParseResult {
+  const fields: Partial<Person> = {};
+  const birthDate = optionalDate(entry.birthDate, "birth date");
+  if (typeof birthDate !== "string") return birthDate;
+  if (birthDate) fields.birthDate = birthDate;
+  const deathDate = optionalDate(entry.deathDate, "death date");
+  if (typeof deathDate !== "string") return deathDate;
+  if (deathDate) fields.deathDate = deathDate;
+  const birthPlace = optionalText(entry.birthPlace, "birth place", 160);
+  if (typeof birthPlace !== "string") return birthPlace;
+  if (birthPlace) fields.birthPlace = birthPlace;
+  const deathPlace = optionalText(entry.deathPlace, "death place", 160);
+  if (typeof deathPlace !== "string") return deathPlace;
+  if (deathPlace) fields.deathPlace = deathPlace;
+  const note = optionalText(entry.note, "note", 2000);
+  if (typeof note !== "string") return note;
+  if (note) fields.note = note;
+  const photo = optionalPhoto(entry.photo);
+  if (typeof photo !== "string") return photo;
+  if (photo) fields.photo = photo;
+  return { ok: true, fields };
+}
+
+function optionalDate(value: unknown, label: string): string | ParseResult {
+  if (value === undefined || value === "") return "";
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return fail(`A ${label} in that file is unreadable.`);
+  }
+  return value;
+}
+
+function optionalText(value: unknown, label: string, max: number): string | ParseResult {
+  if (value === undefined || value === "") return "";
+  if (typeof value !== "string") return fail(`A ${label} in that file is unreadable.`);
+  const trimmed = value.trim();
+  if (trimmed.length > max) return fail(`A ${label} in that file is too long.`);
+  return trimmed;
+}
+
+function optionalPhoto(value: unknown): string | ParseResult {
+  if (value === undefined || value === "") return "";
+  if (typeof value !== "string" || !value.startsWith("data:image/")) {
+    return fail("A photo in that file is unreadable.");
+  }
+  if (value.length > 1_500_000) return fail("A photo in that file is too large.");
+  return value;
 }
 
 function isStringArray(value: unknown): value is string[] {

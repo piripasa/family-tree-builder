@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { readProfilePhoto } from "@/model/photo";
 import {
   childrenOf,
   displayName,
@@ -10,14 +11,14 @@ import {
   partnershipsAsPartner,
   partnersOf,
 } from "@/model/tree";
-import type { RelativeSource, TreeDocument } from "@/model/types";
+import type { Person, RelativeSource, TreeDocument } from "@/model/types";
 
 type Role = "parent" | "partner" | "child";
 
 export function EditorPanel({
   document,
   onFocus,
-  onRename,
+  onUpdate,
   onAddParent,
   onAddPartner,
   onAddChild,
@@ -25,14 +26,24 @@ export function EditorPanel({
 }: {
   document: TreeDocument;
   onFocus: (personId: string) => void;
-  onRename: (personId: string, givenName: string, familyName: string) => void;
+  onUpdate: (personId: string, patch: Partial<Omit<Person, "id">>) => void;
   onAddParent: (source: RelativeSource) => boolean;
   onAddPartner: (source: RelativeSource) => boolean;
   onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
   onDelete: (personId: string) => void;
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPhotoError(null);
+  }, [person?.id]);
+
   if (!person) return null;
+
+  const datesInverted = Boolean(
+    person.birthDate && person.deathDate && person.deathDate < person.birthDate,
+  );
 
   const parents = parentsOf(document, person.id);
   const partners = partnersOf(document, person.id);
@@ -50,7 +61,7 @@ export function EditorPanel({
           Given name
           <input
             value={person.givenName}
-            onChange={(event) => onRename(person.id, event.target.value, person.familyName)}
+            onChange={(event) => onUpdate(person.id, { givenName: event.target.value })}
             autoComplete="off"
           />
         </label>
@@ -58,8 +69,94 @@ export function EditorPanel({
           Family name
           <input
             value={person.familyName}
-            onChange={(event) => onRename(person.id, person.givenName, event.target.value)}
+            onChange={(event) => onUpdate(person.id, { familyName: event.target.value })}
             autoComplete="off"
+          />
+        </label>
+
+        <div className="photo-row">
+          {person.photo ? (
+            <img className="photo-preview" src={person.photo} alt="" />
+          ) : (
+            <div className="photo-preview empty" aria-hidden="true" />
+          )}
+          <div className="photo-actions">
+            <label className="file-button">
+              {person.photo ? "Change photo" : "Add photo"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  readProfilePhoto(file).then(
+                    (photo) => {
+                      setPhotoError(null);
+                      onUpdate(person.id, { photo });
+                    },
+                    (error: unknown) => {
+                      setPhotoError(error instanceof Error ? error.message : "That image could not be read.");
+                    },
+                  );
+                }}
+              />
+            </label>
+            {person.photo ? (
+              <button type="button" onClick={() => onUpdate(person.id, { photo: "" })}>
+                Remove photo
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {photoError ? (
+          <p className="message" role="alert">
+            {photoError}
+          </p>
+        ) : null}
+
+        <div className="profile-grid">
+          <label className="field">
+            Birth date
+            <input
+              type="date"
+              value={person.birthDate ?? ""}
+              onChange={(event) => onUpdate(person.id, { birthDate: event.target.value })}
+            />
+          </label>
+          <label className="field">
+            Death date
+            <input
+              type="date"
+              value={person.deathDate ?? ""}
+              onChange={(event) => onUpdate(person.id, { deathDate: event.target.value })}
+            />
+          </label>
+          <label className="field">
+            Birth place
+            <input
+              value={person.birthPlace ?? ""}
+              onChange={(event) => onUpdate(person.id, { birthPlace: event.target.value })}
+              autoComplete="off"
+            />
+          </label>
+          <label className="field">
+            Death place
+            <input
+              value={person.deathPlace ?? ""}
+              onChange={(event) => onUpdate(person.id, { deathPlace: event.target.value })}
+              autoComplete="off"
+            />
+          </label>
+        </div>
+        {datesInverted ? <p className="hint">The death date is earlier than the birth date.</p> : null}
+        <label className="field">
+          Note
+          <textarea
+            rows={3}
+            maxLength={2000}
+            value={person.note ?? ""}
+            onChange={(event) => onUpdate(person.id, { note: event.target.value })}
           />
         </label>
 

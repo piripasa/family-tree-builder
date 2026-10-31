@@ -132,9 +132,7 @@ export function TreeApp() {
         <EditorPanel
           document={document}
           onFocus={(personId) => setDocument(setFocus(document, personId))}
-          onRename={(personId, nextGiven, nextFamily) =>
-            setDocument(updatePerson(document, personId, nextGiven, nextFamily))
-          }
+          onUpdate={(personId, patch) => setDocument(updatePerson(document, personId, patch))}
           onAddParent={(source) => addRelative(source, (item) => addParent(document, document.focusId as string, item))}
           onAddPartner={(source) =>
             addRelative(source, (item) => addPartner(document, document.focusId as string, item))

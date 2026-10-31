@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CARD_HEIGHT, CARD_WIDTH, layoutTree, type TreeLayout } from "@/model/layout";
-import { displayName, getPerson } from "@/model/tree";
+import { displayName, getPerson, lifeSpan } from "@/model/tree";
 import type { TreeDocument } from "@/model/types";
 
 export type TreeCanvasHandle = {
@@ -122,6 +122,9 @@ export const TreeCanvas = forwardRef<
               if (!person) return null;
               const family = person.familyName.trim();
               const given = person.givenName.trim() || "Unnamed";
+              const span = lifeSpan(person);
+              const textX = person.photo ? 56 : 16;
+              const label = [displayName(person), span].filter(Boolean).join(", ");
               return (
                 <g
                   key={`${card.personId}-${index}`}
@@ -130,7 +133,7 @@ export const TreeCanvas = forwardRef<
                   tabIndex={0}
                   role="button"
                   aria-pressed={card.isFocus}
-                  aria-label={displayName(person)}
+                  aria-label={label}
                   onClick={() => onFocus(card.personId)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -140,22 +143,37 @@ export const TreeCanvas = forwardRef<
                   }}
                   onPointerDown={(event) => event.stopPropagation()}
                 >
-                  <title>{displayName(person)}</title>
+                  <title>{label}</title>
                   <rect width={card.width} height={card.height} rx="12" />
-                  {family ? (
+                  {person.photo ? (
                     <>
-                      <text x="16" y="32" className="card-given">
-                        {truncate(given, 18)}
-                      </text>
-                      <text x="16" y="54" className="card-family">
-                        {truncate(family, 22)}
-                      </text>
+                      <clipPath id={`photo-${card.personId}`}>
+                        <circle cx="28" cy={CARD_HEIGHT / 2} r="16" />
+                      </clipPath>
+                      <image
+                        href={person.photo}
+                        x="12"
+                        y={CARD_HEIGHT / 2 - 16}
+                        width="32"
+                        height="32"
+                        clipPath={`url(#photo-${card.personId})`}
+                        preserveAspectRatio="xMidYMid slice"
+                      />
                     </>
-                  ) : (
-                    <text x="16" y="44" className="card-given">
-                      {truncate(given, 18)}
+                  ) : null}
+                  <text x={textX} y={span ? 28 : family ? 36 : 50} className="card-given">
+                    {truncate(given, person.photo ? 13 : 18)}
+                  </text>
+                  {family ? (
+                    <text x={textX} y={span ? 48 : 58} className="card-family">
+                      {truncate(family, person.photo ? 16 : 22)}
                     </text>
-                  )}
+                  ) : null}
+                  {span ? (
+                    <text x={textX} y="72" className="card-span">
+                      {span}
+                    </text>
+                  ) : null}
                   {card.hiddenUp ? (
                     <circle cx={CARD_WIDTH / 2} cy={-8} r="3.5" className="more-mark">
                       <title>More ancestors</title>
