@@ -123,6 +123,44 @@ h2,
   letter-spacing: -0.02em;
 }
 
+.tree-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--forest);
+}
+
+.tree-field select,
+.tree-field input {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  min-width: 9.5rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.share-banner {
+  background: #efe7d6;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  line-height: 1.45;
+}
+
 .toolbar-actions {
   display: flex;
   flex-wrap: wrap;

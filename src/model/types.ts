@@ -8,6 +8,7 @@ export type Person = {
   deathDate?: string;
   deathPlace?: string;
   note?: string;
+  living?: boolean;
 };
 
 export type Partnership = {
@@ -21,6 +22,18 @@ export type TreeDocument = {
   people: Person[];
   partnerships: Partnership[];
   focusId: string | null;
+};
+
+export type SavedTree = {
+  id: string;
+  title: string;
+  document: TreeDocument;
+};
+
+export type TreeLibrary = {
+  version: 1;
+  activeId: string;
+  trees: SavedTree[];
 };
 
 export type RelativeSource =

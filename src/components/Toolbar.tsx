@@ -1,18 +1,40 @@
+import type { SavedTree } from "@/model/types";
+
 export function Toolbar({
+  trees,
+  activeId,
+  title,
   message,
   canExport,
+  canDelete,
+  sharing,
+  onSelectTree,
+  onRenameTree,
   onNew,
+  onDeleteTree,
   onImport,
   onExport,
+  onShare,
+  onToggleShare,
   onZoomIn,
   onZoomOut,
   onFit,
 }: {
+  trees: SavedTree[];
+  activeId: string;
+  title: string;
   message: string | null;
   canExport: boolean;
+  canDelete: boolean;
+  sharing: boolean;
+  onSelectTree: (id: string) => void;
+  onRenameTree: (title: string) => void;
   onNew: () => void;
+  onDeleteTree: () => void;
   onImport: (file: File) => void;
   onExport: () => void;
+  onShare: () => void;
+  onToggleShare: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFit: () => void;
@@ -20,9 +42,31 @@ export function Toolbar({
   return (
     <header className="toolbar">
       <h1>Family tree</h1>
+      <label className="tree-field">
+        Tree
+        <select value={activeId} onChange={(event) => onSelectTree(event.target.value)}>
+          {trees.map((tree) => (
+            <option key={tree.id} value={tree.id}>
+              {tree.title.trim() || "Untitled"}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="tree-field">
+        Name
+        <input
+          value={title}
+          onChange={(event) => onRenameTree(event.target.value)}
+          autoComplete="off"
+          maxLength={80}
+        />
+      </label>
       <div className="toolbar-actions">
         <button type="button" onClick={onNew}>
-          New
+          New tree
+        </button>
+        <button type="button" onClick={onDeleteTree} disabled={!canDelete}>
+          Delete tree
         </button>
         <label className="file-button">
           Import
@@ -38,6 +82,18 @@ export function Toolbar({
         </label>
         <button type="button" onClick={onExport} disabled={!canExport}>
           Export
+        </button>
+        <button type="button" onClick={onShare} disabled={!canExport}>
+          Share
+        </button>
+        <button
+          type="button"
+          aria-pressed={sharing}
+          className={sharing ? "primary" : undefined}
+          onClick={onToggleShare}
+          disabled={!canExport}
+        >
+          Shared view
         </button>
         <span className="toolbar-gap" />
         <button type="button" aria-label="Zoom in" onClick={onZoomIn}>

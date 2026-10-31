@@ -5,12 +5,12 @@ export type ParseResult =
   | { ok: true; document: TreeDocument }
   | { ok: false; error: string };
 
-export function downloadTree(tree: TreeDocument): void {
+export function downloadTree(tree: TreeDocument, filename = "family-tree.json"): void {
   const blob = new Blob([JSON.stringify(tree, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = window.document.createElement("a");
   link.href = url;
-  link.download = "family-tree.json";
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -126,6 +126,10 @@ function readProfile(
   const photo = optionalPhoto(entry.photo);
   if (typeof photo !== "string") return photo;
   if (photo) fields.photo = photo;
+  if (entry.living !== undefined && typeof entry.living !== "boolean") {
+    return fail("A living flag in that file is unreadable.");
+  }
+  if (entry.living === false || (entry.living === true && fields.deathDate)) fields.living = false;
   return { ok: true, fields };
 }
 

@@ -6,6 +6,7 @@ import {
   childrenOf,
   displayName,
   eligiblePeople,
+  isAlive,
   parentsOf,
   partnershipLabel,
   partnershipsAsPartner,
@@ -17,6 +18,7 @@ type Role = "parent" | "partner" | "child";
 
 export function EditorPanel({
   document,
+  sharing,
   onFocus,
   onUpdate,
   onAddParent,
@@ -25,6 +27,7 @@ export function EditorPanel({
   onDelete,
 }: {
   document: TreeDocument;
+  sharing: boolean;
   onFocus: (personId: string) => void;
   onUpdate: (personId: string, patch: Partial<Omit<Person, "id">>) => void;
   onAddParent: (source: RelativeSource) => boolean;
@@ -41,6 +44,7 @@ export function EditorPanel({
 
   if (!person) return null;
 
+  const alive = isAlive(person);
   const datesInverted = Boolean(
     person.birthDate && person.deathDate && person.deathDate < person.birthDate,
   );
@@ -53,6 +57,11 @@ export function EditorPanel({
   return (
     <aside className="panel">
       <div className="panel-scroll">
+        {sharing ? (
+          <p className="share-banner">
+            Shared view. Living people stay in the tree and appear as Living, without their private details.
+          </p>
+        ) : null}
         <p className="eyebrow">Selected person</p>
         <h2>{displayName(person)}</h2>
         <p className="lede">Parents are above this person. Partners and children are below.</p>
@@ -73,6 +82,16 @@ export function EditorPanel({
             autoComplete="off"
           />
         </label>
+
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={alive}
+            onChange={(event) => onUpdate(person.id, { living: event.target.checked })}
+          />
+          Alive
+        </label>
+        <p className="hint">A shared file keeps an alive person in the tree and leaves out their name, photo, dates, places, and note.</p>
 
         <div className="photo-row">
           {person.photo ? (
@@ -125,14 +144,6 @@ export function EditorPanel({
             />
           </label>
           <label className="field">
-            Death date
-            <input
-              type="date"
-              value={person.deathDate ?? ""}
-              onChange={(event) => onUpdate(person.id, { deathDate: event.target.value })}
-            />
-          </label>
-          <label className="field">
             Birth place
             <input
               value={person.birthPlace ?? ""}
@@ -140,14 +151,26 @@ export function EditorPanel({
               autoComplete="off"
             />
           </label>
-          <label className="field">
-            Death place
-            <input
-              value={person.deathPlace ?? ""}
-              onChange={(event) => onUpdate(person.id, { deathPlace: event.target.value })}
-              autoComplete="off"
-            />
-          </label>
+          {alive ? null : (
+            <>
+              <label className="field">
+                Death date
+                <input
+                  type="date"
+                  value={person.deathDate ?? ""}
+                  onChange={(event) => onUpdate(person.id, { deathDate: event.target.value })}
+                />
+              </label>
+              <label className="field">
+                Death place
+                <input
+                  value={person.deathPlace ?? ""}
+                  onChange={(event) => onUpdate(person.id, { deathPlace: event.target.value })}
+                  autoComplete="off"
+                />
+              </label>
+            </>
+          )}
         </div>
         {datesInverted ? <p className="hint">The death date is earlier than the birth date.</p> : null}
         <label className="field">

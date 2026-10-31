@@ -15,6 +15,11 @@ export function displayName(person: Person): string {
   return name || "Unnamed";
 }
 
+export function isAlive(person: Person): boolean {
+  if (person.living === false || person.deathDate) return false;
+  return true;
+}
+
 export function lifeSpan(person: Person): string {
   const birth = yearOf(person.birthDate);
   const death = yearOf(person.deathDate);
@@ -382,6 +387,15 @@ function replacementFocus(doc: TreeDocument, personId: string): string | null {
 
 function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): Person {
   const next: Person = { ...person, ...patch };
+  if (patch.living === true) {
+    delete next.deathDate;
+    delete next.deathPlace;
+  } else if (patch.living === false) {
+    next.living = false;
+  } else if (typeof patch.deathDate === "string" && patch.deathDate.trim() !== "") {
+    next.living = false;
+  }
+  if (next.living !== false) delete next.living;
   for (const key of ["birthDate", "deathDate", "birthPlace", "deathPlace", "note"] as const) {
     const value = next[key]?.trim();
     if (value) next[key] = value;
