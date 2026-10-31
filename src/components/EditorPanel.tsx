@@ -1,0 +1,284 @@
+"use client";
+
+import { useEffect, useId, useState } from "react";
+import {
+  childrenOf,
+  displayName,
+  eligiblePeople,
+  parentsOf,
+  partnershipLabel,
+  partnershipsAsPartner,
+  partnersOf,
+} from "@/model/tree";
+import type { RelativeSource, TreeDocument } from "@/model/types";
+
+type Role = "parent" | "partner" | "child";
+
+export function EditorPanel({
+  document,
+  onFocus,
+  onRename,
+  onAddParent,
+  onAddPartner,
+  onAddChild,
+  onDelete,
+}: {
+  document: TreeDocument;
+  onFocus: (personId: string) => void;
+  onRename: (personId: string, givenName: string, familyName: string) => void;
+  onAddParent: (source: RelativeSource) => boolean;
+  onAddPartner: (source: RelativeSource) => boolean;
+  onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
+  onDelete: (personId: string) => void;
+}) {
+  const person = document.people.find((item) => item.id === document.focusId);
+  if (!person) return null;
+
+  const parents = parentsOf(document, person.id);
+  const partners = partnersOf(document, person.id);
+  const children = childrenOf(document, person.id);
+  const partnerships = partnershipsAsPartner(document, person.id);
+
+  return (
+    <aside className="panel">
+      <div className="panel-scroll">
+        <p className="eyebrow">Selected person</p>
+        <h2>{displayName(person)}</h2>
+        <p className="lede">Parents are above this person. Partners and children are below.</p>
+
+        <label className="field">
+          Given name
+          <input
+            value={person.givenName}
+            onChange={(event) => onRename(person.id, event.target.value, person.familyName)}
+            autoComplete="off"
+          />
+        </label>
+        <label className="field">
+          Family name
+          <input
+            value={person.familyName}
+            onChange={(event) => onRename(person.id, person.givenName, event.target.value)}
+            autoComplete="off"
+          />
+        </label>
+
+        <dl className="relations">
+          <RelationList label="Parents" people={parents} onFocus={onFocus} />
+          <RelationList label="Partners" people={partners} onFocus={onFocus} />
+          <RelationList label="Children" people={children} onFocus={onFocus} />
+        </dl>
+
+        {parents.length >= 2 ? (
+          <p className="hint">This person already has two parents.</p>
+        ) : (
+          <RelativeForm
+            key={`parent-${person.id}`}
+            title="Add parent"
+            role="parent"
+            document={document}
+            personId={person.id}
+            partnerships={[]}
+            onSubmit={(source) => onAddParent(source)}
+          />
+        )}
+        <RelativeForm
+          key={`partner-${person.id}`}
+          title="Add partner"
+          role="partner"
+          document={document}
+          personId={person.id}
+          partnerships={[]}
+          onSubmit={(source) => onAddPartner(source)}
+        />
+        <RelativeForm
+          key={`child-${person.id}`}
+          title="Add child"
+          role="child"
+          document={document}
+          personId={person.id}
+          partnerships={partnerships.map((partnership) => ({
+            id: partnership.id,
+            label: partnershipLabel(document, partnership, person.id),
+          }))}
+          onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
+        />
+
+        <button type="button" className="danger" onClick={() => onDelete(person.id)}>
+          Delete {displayName(person)}
+        </button>
+
+        <div className="everyone">
+          <h3>Everyone</h3>
+          <ul>
+            {document.people.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={item.id === person.id ? "person-link current" : "person-link"}
+                  aria-current={item.id === person.id ? "true" : undefined}
+                  onClick={() => onFocus(item.id)}
+                >
+                  {displayName(item)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function RelationList({
+  label,
+  people,
+  onFocus,
+}: {
+  label: string;
+  people: { id: string; givenName: string; familyName: string }[];
+  onFocus: (personId: string) => void;
+}) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>
+        {people.length === 0
+          ? "None yet"
+          : people.map((person) => (
+              <button key={person.id} type="button" className="text-link" onClick={() => onFocus(person.id)}>
+                {displayName(person)}
+              </button>
+            ))}
+      </dd>
+    </div>
+  );
+}
+
+function RelativeForm({
+  title,
+  role,
+  document,
+  personId,
+  partnerships,
+  onSubmit,
+}: {
+  title: string;
+  role: Role;
+  document: TreeDocument;
+  personId: string;
+  partnerships: { id: string; label: string }[];
+  onSubmit: (source: RelativeSource, partnershipId?: string) => boolean;
+}) {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"new" | "existing">("new");
+  const [givenName, setGivenName] = useState("");
+  const [familyName, setFamilyName] = useState("");
+  const candidates = eligiblePeople(document, personId, role);
+  const [existingId, setExistingId] = useState(candidates[0]?.id ?? "");
+  const [partnershipId, setPartnershipId] = useState(partnerships[0]?.id ?? "");
+
+  useEffect(() => {
+    if (!candidates.some((person) => person.id === existingId)) {
+      setExistingId(candidates[0]?.id ?? "");
+    }
+  }, [candidates, existingId]);
+
+  useEffect(() => {
+    if (!partnerships.some((partnership) => partnership.id === partnershipId)) {
+      setPartnershipId(partnerships[0]?.id ?? "");
+    }
+  }, [partnerships, partnershipId]);
+
+  function submit() {
+    const source: RelativeSource =
+      mode === "existing" && candidates.length > 0
+        ? { type: "existing", personId: existingId }
+        : { type: "new", givenName, familyName };
+    const chosenPartnership =
+      role === "child" && partnerships.length > 0 ? partnershipId : undefined;
+    const ok = onSubmit(source, chosenPartnership);
+    if (!ok) return;
+    setGivenName("");
+    setFamilyName("");
+    setOpen(false);
+  }
+
+  return (
+    <section className="adder">
+      <button
+        type="button"
+        className="adder-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {title}
+      </button>
+      {open ? (
+        <div className="adder-body">
+          {role === "child" && partnerships.length > 1 ? (
+            <label className="field">
+              Partnership
+              <select value={partnershipId} onChange={(event) => setPartnershipId(event.target.value)}>
+                {partnerships.map((partnership) => (
+                  <option key={partnership.id} value={partnership.id}>
+                    {partnership.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {candidates.length > 0 ? (
+            <div className="segmented" role="group" aria-label={`${title} source`}>
+              <button type="button" aria-pressed={mode === "new"} onClick={() => setMode("new")}>
+                New person
+              </button>
+              <button type="button" aria-pressed={mode === "existing"} onClick={() => setMode("existing")}>
+                In this tree
+              </button>
+            </div>
+          ) : null}
+
+          {mode === "existing" && candidates.length > 0 ? (
+            <label className="field">
+              Person
+              <select value={existingId} onChange={(event) => setExistingId(event.target.value)}>
+                {candidates.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {displayName(candidate)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <label className="field" htmlFor={`${formId}-given`}>
+                Given name
+                <input
+                  id={`${formId}-given`}
+                  value={givenName}
+                  onChange={(event) => setGivenName(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <label className="field" htmlFor={`${formId}-family`}>
+                Family name
+                <input
+                  id={`${formId}-family`}
+                  value={familyName}
+                  onChange={(event) => setFamilyName(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+            </>
+          )}
+          <button type="button" className="primary" onClick={submit}>
+            {title}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
