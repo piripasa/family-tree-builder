@@ -13,6 +13,7 @@ import {
   replaceActive,
   selectTree,
 } from "@/model/library";
+import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
 import { loadLibrary, saveLibrary } from "@/model/storage";
 import {
@@ -160,6 +161,18 @@ export function TreeApp() {
         onDeleteTree={onDeleteTree}
         onImport={onImport}
         onExport={() => downloadTree(document)}
+        onExportImage={() => {
+          void downloadTreeImage(shown, current.title).then(
+            () => setMessage(null),
+            () => setMessage("The picture could not be created."),
+          );
+        }}
+        onExportPdf={() => {
+          void downloadTreePdf(shown, current.title).then(
+            () => setMessage(null),
+            () => setMessage("The PDF could not be created."),
+          );
+        }}
         onShare={() => downloadTree(sharedTree(document), "family-tree-shared.json")}
         onToggleShare={() => setSharing((value) => !value)}
         onZoomIn={() => canvasRef.current?.zoomIn()}

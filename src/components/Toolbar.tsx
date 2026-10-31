@@ -14,6 +14,8 @@ export function Toolbar({
   onDeleteTree,
   onImport,
   onExport,
+  onExportImage,
+  onExportPdf,
   onShare,
   onToggleShare,
   onZoomIn,
@@ -33,6 +35,8 @@ export function Toolbar({
   onDeleteTree: () => void;
   onImport: (file: File) => void;
   onExport: () => void;
+  onExportImage: () => void;
+  onExportPdf: () => void;
   onShare: () => void;
   onToggleShare: () => void;
   onZoomIn: () => void;
@@ -82,6 +86,12 @@ export function Toolbar({
         </label>
         <button type="button" onClick={onExport} disabled={!canExport}>
           Export
+        </button>
+        <button type="button" aria-label="Export as image" onClick={onExportImage} disabled={!canExport}>
+          Image
+        </button>
+        <button type="button" aria-label="Export as printable PDF" onClick={onExportPdf} disabled={!canExport}>
+          PDF
         </button>
         <button type="button" onClick={onShare} disabled={!canExport}>
           Share
