@@ -5,7 +5,8 @@ import { EditorPanel } from "@/components/EditorPanel";
 import { Toolbar } from "@/components/Toolbar";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
 import { applyLibraryChanges, fetchSession, loadAccountLibrary, signIn, signOut, signUp } from "@/model/account";
-import { parseTreeDocument, downloadTree } from "@/model/io";
+import { downloadGedcom, parseGedcom } from "@/model/gedcom";
+import { downloadTree, parseTreeDocument } from "@/model/io";
 import {
   activeTree,
   addTree,
@@ -164,11 +165,20 @@ export function TreeApp() {
   }
 
   async function onImport(file: File) {
+    const text = await file.text();
+    const name = file.name.toLowerCase();
     let parsed: ReturnType<typeof parseTreeDocument>;
-    try {
-      parsed = parseTreeDocument(JSON.parse(await file.text()));
-    } catch {
-      setMessage("That file is not valid JSON.");
+    if (name.endsWith(".ged") || name.endsWith(".gedcom")) {
+      parsed = parseGedcom(text);
+    } else if (name.endsWith(".json") || text.trimStart().startsWith("{")) {
+      try {
+        parsed = parseTreeDocument(JSON.parse(text));
+      } catch {
+        setMessage("That file is not valid JSON.");
+        return;
+      }
+    } else {
+      setMessage("Import a JSON or GEDCOM file.");
       return;
     }
     if (!parsed.ok) {
@@ -264,6 +274,7 @@ export function TreeApp() {
         onDeleteTree={onDeleteTree}
         onImport={onImport}
         onExport={() => downloadTree(document)}
+        onExportGedcom={() => downloadGedcom(document, current.title)}
         onExportImage={() => {
           void downloadTreeImage(shown, current.title).then(
             () => setMessage(null),

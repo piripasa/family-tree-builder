@@ -15,6 +15,7 @@ export function Toolbar({
   onDeleteTree,
   onImport,
   onExport,
+  onExportGedcom,
   onExportImage,
   onExportPdf,
   onShare,
@@ -40,6 +41,7 @@ export function Toolbar({
   onDeleteTree: () => void;
   onImport: (file: File) => void;
   onExport: () => void;
+  onExportGedcom: () => void;
   onExportImage: () => void;
   onExportPdf: () => void;
   onShare: () => void;
@@ -86,7 +88,7 @@ export function Toolbar({
           Import
           <input
             type="file"
-            accept="application/json,.json"
+            accept="application/json,.json,.ged,.gedcom,text/plain"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
@@ -96,6 +98,9 @@ export function Toolbar({
         </label>
         <button type="button" onClick={onExport} disabled={!canExport}>
           Export
+        </button>
+        <button type="button" aria-label="Export as GEDCOM" onClick={onExportGedcom} disabled={!canExport}>
+          GEDCOM
         </button>
         <button type="button" aria-label="Export as image" onClick={onExportImage} disabled={!canExport}>
           Image

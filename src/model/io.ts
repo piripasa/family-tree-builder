@@ -129,7 +129,8 @@ function readProfile(
   if (entry.living !== undefined && typeof entry.living !== "boolean") {
     return fail("A living flag in that file is unreadable.");
   }
-  if (entry.living === false || (entry.living === true && fields.deathDate)) fields.living = false;
+  if (entry.living === true && !fields.deathDate) fields.living = true;
+  else if (entry.living === false || entry.living === true) fields.living = false;
   return { ok: true, fields };
 }
 

@@ -53,6 +53,13 @@ describe("parseTreeDocument", () => {
       living: false,
     });
     expect(parsed.document.people[1].living).toBe(false);
+    const alive = parseTreeDocument({
+      version: 1,
+      people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", living: true }],
+      partnerships: [],
+      focusId: "ada",
+    });
+    expect(alive.ok && alive.document.people[0].living).toBe(true);
   });
 
   it.each([
