@@ -20,7 +20,7 @@ const features = [
   },
   {
     title: "Files you can take with you",
-    text: "Export JSON, GEDCOM, a picture, or a printable PDF. Import JSON or GEDCOM when a tree already exists somewhere else.",
+    text: "Export JSON, GEDCOM, a picture, a diagram PDF, or a written report of ancestors and descendants. Import JSON or GEDCOM when a tree already exists somewhere else.",
   },
   {
     title: "One link, view only",
@@ -54,6 +54,10 @@ const questions = [
   {
     question: "What does a share link show?",
     answer: "Only the shared view. People marked alive appear as Living. Everyone else keeps the details you recorded. The page has no editor.",
+  },
+  {
+    question: "What does the written report include?",
+    answer: "Export, then Report, writes a PDF of the selected person's ancestors and descendants, with the dates, places, notes, and partners you recorded. The other PDF is the diagram. The report is a file you download, not the share link.",
   },
   {
     question: "Can the same person be their own ancestor?",
