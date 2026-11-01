@@ -1,4 +1,7 @@
+import { parseEnv } from "@neon/env";
+import { attachDatabasePool } from "@vercel/functions";
 import { Pool, type QueryResult, type QueryResultRow } from "pg";
+import config from "../../neon";
 
 export class DatabaseUnavailable extends Error {
   constructor() {
@@ -11,13 +14,29 @@ type Queryable = {
   query: <T extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]) => Promise<QueryResult<T>>;
 };
 
+type PostgresEnv = {
+  databaseUrl: string;
+  databaseUrlUnpooled: string;
+};
+
 let pool: Pool | null = null;
 let ready: Promise<void> | null = null;
 
+function postgresEnv(): PostgresEnv {
+  if (!process.env.DATABASE_URL) throw new DatabaseUnavailable();
+  if (process.env.DATABASE_URL_UNPOOLED) {
+    const { postgres } = parseEnv(config, ["DATABASE_URL", "DATABASE_URL_UNPOOLED"]);
+    return postgres;
+  }
+  const { postgres } = parseEnv(config, ["DATABASE_URL"]);
+  return { databaseUrl: postgres.databaseUrl, databaseUrlUnpooled: postgres.databaseUrl };
+}
+
 export function getPool(): Pool {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new DatabaseUnavailable();
-  pool ??= new Pool({ connectionString: url, max: 5 });
+  if (!pool) {
+    pool = new Pool({ connectionString: postgresEnv().databaseUrl, max: 5 });
+    attachDatabasePool(pool);
+  }
   return pool;
 }
 
@@ -52,8 +71,9 @@ async function ensureSchema(): Promise<void> {
 }
 
 async function migrate(): Promise<void> {
-  const db = getPool();
-  await db.query(`
+  const db = new Pool({ connectionString: postgresEnv().databaseUrlUnpooled, max: 1 });
+  try {
+    await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id text PRIMARY KEY,
       email text UNIQUE NOT NULL,
@@ -91,6 +111,9 @@ async function migrate(): Promise<void> {
       FOREIGN KEY (owner_id, tree_id) REFERENCES trees (owner_id, id) ON DELETE CASCADE
     );
   `);
+  } finally {
+    await db.end();
+  }
 }
 
 export function isDatabaseUnavailable(error: unknown): boolean {
