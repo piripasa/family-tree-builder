@@ -312,6 +312,18 @@ button:focus-visible,
   gap: 0.35rem 0.7rem;
 }
 
+.marriage {
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  margin: 0.35rem 0 0.7rem;
+  padding: 0.55rem 0.75rem 0.75rem;
+}
+
+.marriage legend {
+  padding: 0 0.3rem;
+  color: var(--muted);
+}
+
 .text-link,
 .person-link {
   border: 0;
@@ -412,6 +424,13 @@ button:focus-visible,
   stroke-width: 1.5;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+.tree-label {
+  fill: var(--muted);
+  font-size: 12px;
+  text-anchor: middle;
+  font-family: Palatino, Georgia, serif;
 }
 
 .person-card {

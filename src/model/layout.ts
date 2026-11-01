@@ -1,5 +1,5 @@
 import { parentPartnershipOf, partnershipsAsPartner } from "./tree";
-import type { TreeDocument } from "./types";
+import type { Partnership, TreeDocument } from "./types";
 
 export const CARD_WIDTH = 176;
 export const CARD_HEIGHT = 92;
@@ -22,6 +22,9 @@ export type LayoutCard = {
 
 export type LayoutLine = {
   d: string;
+  label?: string;
+  labelX?: number;
+  labelY?: number;
 };
 
 export type TreeLayout = {
@@ -159,9 +162,13 @@ function placeDescendant(
         false,
       ),
     );
-    lines.push({
-      d: `M ${personX + CARD_WIDTH / 2} ${top + CARD_HEIGHT} H ${partnerX + CARD_WIDTH / 2}`,
-    });
+    const union = partnershipsAsPartner(doc, node.personId).find((partnership) =>
+      partnership.partnerIds.includes(partner.id),
+    );
+    const x1 = personX + CARD_WIDTH / 2;
+    const x2 = partnerX + CARD_WIDTH / 2;
+    const y = top + CARD_HEIGHT;
+    lines.push(labeledLine(`M ${x1} ${y} H ${x2}`, marriageYear(union), (x1 + x2) / 2, y + 16));
   }
 
   for (const group of node.groups) {
@@ -222,7 +229,7 @@ function placeAncestors(
     placeAncestors(doc, id, cardX + CARD_WIDTH / 2, parentTop, depth + 1, cards, lines, maxGenerations);
   });
 
-  addParentBus(placed, childCenterX, childTop, lines);
+  addParentBus(placed, childCenterX, childTop, lines, marriageYear(partnership));
 }
 
 function ancestorRowWidth(doc: TreeDocument, personId: string, depth: number, maxGenerations: number): number {
@@ -263,6 +270,7 @@ function addParentBus(
   childCenterX: number,
   childTop: number,
   lines: LayoutLine[],
+  label?: string,
 ): void {
   if (parents.length === 0) return;
   const centers = parents.map((parent) => parent.x + CARD_WIDTH / 2);
@@ -277,8 +285,17 @@ function addParentBus(
   for (const center of centers) {
     lines.push({ d: `M ${center} ${parentBottom} V ${busY}` });
   }
-  lines.push({ d: `M ${left} ${busY} H ${right}` });
+  lines.push(labeledLine(`M ${left} ${busY} H ${right}`, centers.length > 1 ? label : undefined, (left + right) / 2, busY - 6));
   lines.push({ d: `M ${childCenterX} ${busY} V ${childTop}` });
+}
+
+function marriageYear(partnership: Partnership | undefined): string | undefined {
+  const year = partnership?.marriageDate?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? `m. ${year}` : undefined;
+}
+
+function labeledLine(d: string, label: string | undefined, labelX: number, labelY: number): LayoutLine {
+  return label ? { d, label, labelX, labelY } : { d };
 }
 
 function addChildBus(

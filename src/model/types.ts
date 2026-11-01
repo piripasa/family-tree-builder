@@ -15,6 +15,8 @@ export type Partnership = {
   id: string;
   partnerIds: string[];
   childIds: string[];
+  marriageDate?: string;
+  marriagePlace?: string;
 };
 
 export type TreeDocument = {

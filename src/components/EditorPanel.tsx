@@ -22,6 +22,7 @@ export function EditorPanel({
   sharing,
   onFocus,
   onUpdate,
+  onUpdatePartnership,
   onAddParent,
   onAddPartner,
   onAddChild,
@@ -31,6 +32,10 @@ export function EditorPanel({
   sharing: boolean;
   onFocus: (personId: string) => void;
   onUpdate: (personId: string, patch: Partial<Omit<Person, "id">>) => void;
+  onUpdatePartnership: (
+    partnershipId: string,
+    patch: { marriageDate?: string; marriagePlace?: string },
+  ) => void;
   onAddParent: (source: RelativeSource) => boolean;
   onAddPartner: (source: RelativeSource) => boolean;
   onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
@@ -189,6 +194,35 @@ export function EditorPanel({
           <RelationList label="Partners" people={partners} onFocus={onFocus} />
           <RelationList label="Children" people={children} onFocus={onFocus} />
         </dl>
+
+        {partnerships
+          .filter((partnership) => partnership.partnerIds.length === 2)
+          .map((partnership) => (
+            <fieldset key={partnership.id} className="marriage">
+              <legend>{partnershipLabel(document, partnership, person.id)}</legend>
+              <label className="field">
+                Marriage date
+                <input
+                  type="date"
+                  value={partnership.marriageDate ?? ""}
+                  onChange={(event) =>
+                    onUpdatePartnership(partnership.id, { marriageDate: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                Marriage place
+                <input
+                  value={partnership.marriagePlace ?? ""}
+                  maxLength={160}
+                  autoComplete="off"
+                  onChange={(event) =>
+                    onUpdatePartnership(partnership.id, { marriagePlace: event.target.value })
+                  }
+                />
+              </label>
+            </fieldset>
+          ))}
 
         {parents.length >= 2 ? (
           <p className="hint">This person already has two parents.</p>

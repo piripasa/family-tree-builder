@@ -115,7 +115,14 @@ export const TreeCanvas = forwardRef<
         {layout ? (
           <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
             {layout.lines.map((line, index) => (
-              <path key={index} d={line.d} className="tree-line" />
+              <g key={index}>
+                <path d={line.d} className="tree-line" />
+                {line.label != null && line.labelX != null && line.labelY != null ? (
+                  <text x={line.labelX} y={line.labelY} className="tree-label">
+                    {line.label}
+                  </text>
+                ) : null}
+              </g>
             ))}
             {layout.cards.map((card, index) => {
               const person = getPerson(document, card.personId);

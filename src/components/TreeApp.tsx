@@ -28,6 +28,7 @@ import {
   displayName,
   setFocus,
   updatePerson,
+  updatePartnership,
 } from "@/model/tree";
 import type { RelativeSource, TreeDocument, TreeLibrary, TreeResult } from "@/model/types";
 
@@ -303,6 +304,9 @@ export function TreeApp() {
           sharing={sharing}
           onFocus={(personId) => updateDocument(setFocus(document, personId))}
           onUpdate={(personId, patch) => updateDocument(updatePerson(document, personId, patch))}
+          onUpdatePartnership={(partnershipId, patch) =>
+            updateDocument(updatePartnership(document, partnershipId, patch))
+          }
           onAddParent={(source) => addRelative(source, (item) => addParent(document, document.focusId as string, item))}
           onAddPartner={(source) =>
             addRelative(source, (item) => addPartner(document, document.focusId as string, item))

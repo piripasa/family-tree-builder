@@ -16,6 +16,7 @@ import {
   partnersOf,
   partnershipLabel,
   setFocus,
+  updatePartnership,
   updatePerson,
 } from "./tree";
 import type { TreeDocument, TreeResult } from "./types";
@@ -214,15 +215,32 @@ describe("relationships", () => {
     expect(eligiblePeople(doc, named(doc, "Alex").id, "child").map((person) => person.givenName)).not.toContain("Casey");
   });
 
+  it("records a marriage and clears it when the fields are emptied", () => {
+    let doc = must(addFirstPerson(createEmptyDocument(), "Ada", "Lovelace"));
+    doc = must(addPartner(doc, doc.focusId as string, { type: "new", givenName: "Ann", familyName: "King" }));
+    const id = doc.partnerships[0].id;
+    doc = updatePartnership(doc, id, { marriageDate: "1815-07-01", marriagePlace: "  London  " });
+    expect(doc.partnerships[0]).toMatchObject({ marriageDate: "1815-07-01", marriagePlace: "London" });
+    doc = updatePartnership(doc, id, { marriageDate: "", marriagePlace: " " });
+    expect(doc.partnerships[0].marriageDate).toBeUndefined();
+    expect(doc.partnerships[0].marriagePlace).toBeUndefined();
+    expect(updatePartnership(doc, "missing", { marriageDate: "1815-07-01" }).partnerships).toEqual(doc.partnerships);
+  });
+
   it("moves the focus to a remaining relative when someone is removed", () => {
     let doc = must(addFirstPerson(createEmptyDocument(), "Casey", "River"));
     const casey = doc.focusId as string;
     doc = must(addPartner(doc, casey, { type: "new", givenName: "Eden", familyName: "Moss" }));
+    doc = updatePartnership(doc, doc.partnerships.find((item) => item.partnerIds.includes(casey) && item.partnerIds.length === 2)?.id ?? "", {
+      marriageDate: "1990-05-01",
+      marriagePlace: "Lisbon",
+    });
     doc = setFocus(doc, casey);
     doc = deletePerson(doc, casey);
     expect(doc.people.map((person) => person.givenName)).toEqual(["Eden"]);
     expect(doc.focusId).toBe(named(doc, "Eden").id);
     expect(doc.partnerships[0].partnerIds).toEqual([named(doc, "Eden").id]);
+    expect(doc.partnerships[0].marriageDate).toBeUndefined();
 
     doc = deletePerson(doc, named(doc, "Eden").id);
     expect(doc.people).toEqual([]);

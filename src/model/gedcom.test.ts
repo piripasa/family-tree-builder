@@ -22,7 +22,7 @@ const document: TreeDocument = {
     { id: "pat", givenName: "Pat", familyName: "Moss", birthDate: "1815-13-01", birthPlace: "Rome" },
   ],
   partnerships: [
-    { id: "parents", partnerIds: ["ann", "byron"], childIds: ["ada"] },
+    { id: "parents", partnerIds: ["ann", "byron"], childIds: ["ada"], marriageDate: "1815-01-02", marriagePlace: "Kirkby Mallory" },
     { id: "solo", partnerIds: ["ada"], childIds: ["child"] },
   ],
 };
@@ -37,6 +37,8 @@ describe("gedcom", () => {
     expect(gedcom).toContain("1 NAME Ada /Lovelace/");
     expect(gedcom).toContain("2 DATE 10 DEC 1815");
     expect(gedcom).toContain("2 DATE 1815-13-01");
+    expect(gedcom).toContain("1 MARR");
+    expect(gedcom).toContain("2 DATE 2 JAN 1815");
     expect(gedcom).toContain("1 _LIV Y");
     expect(gedcom).toContain("2 CONT ");
     expect(gedcom).toContain("3 CONC ");
@@ -61,6 +63,10 @@ describe("gedcom", () => {
     expect(ann.birthPlace).toBe("Dublin");
     expect(byron).toMatchObject({ deathDate: "1824-04-19", deathPlace: "Missolonghi", living: false });
     expect(parentsOf(parsed.document, ada.id).map((person) => person.givenName).sort()).toEqual(["Ann", "George"]);
+    const union = parsed.document.partnerships.find(
+      (partnership) => partnership.partnerIds.includes(ann.id) && partnership.partnerIds.includes(byron.id),
+    );
+    expect(union).toMatchObject({ marriageDate: "1815-01-02", marriagePlace: "Kirkby Mallory" });
     expect(partnersOf(parsed.document, ada.id)).toEqual([]);
     expect(parentsOf(parsed.document, child.id).map((person) => person.id)).toEqual([ada.id]);
   });

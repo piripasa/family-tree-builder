@@ -1,5 +1,5 @@
 import { parseTreeDocument, type ParseResult } from "./io";
-import type { Person, TreeDocument } from "./types";
+import type { Partnership, Person, TreeDocument } from "./types";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 
@@ -45,6 +45,9 @@ export function exportGedcom(document: TreeDocument): string {
     if (second && ids.has(second)) lines.push(`1 WIFE ${ids.get(second)}`);
     for (const childId of partnership.childIds) {
       if (ids.has(childId)) lines.push(`1 CHIL ${ids.get(childId)}`);
+    }
+    if (partnership.marriageDate || partnership.marriagePlace) {
+      writeEvent(lines, "MARR", partnership.marriageDate, partnership.marriagePlace);
     }
   });
 
@@ -95,11 +98,15 @@ export function parseGedcom(text: string): ParseResult {
     const childIds = pointers(family, "CHIL").map((pointer) => people.get(pointer));
     if (childIds.some((id) => !id)) return fail("That file links to someone who is missing.");
     if (partnerIds.length === 0) continue;
-    partnerships.push({
+    const marriage = readEvent(family, "MARR");
+    const partnership: Partnership = {
       id: crypto.randomUUID(),
       partnerIds: partnerIds as string[],
       childIds: childIds as string[],
-    });
+    };
+    if (marriage.date) partnership.marriageDate = marriage.date;
+    if (marriage.place) partnership.marriagePlace = marriage.place.slice(0, 160);
+    partnerships.push(partnership);
   }
 
   return parseTreeDocument({

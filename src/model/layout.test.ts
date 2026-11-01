@@ -31,6 +31,15 @@ describe("layoutTree", () => {
     step = must(addParent(step.document, casey, { type: "new", givenName: "Alex", familyName: "River" }));
     step = must(addParent(step.document, casey, { type: "new", givenName: "Blair", familyName: "Quinn" }));
     step = must(addChild(step.document, casey, { type: "new", givenName: "Finn", familyName: "River" }));
+    step = {
+      ...step,
+      document: {
+        ...step.document,
+        partnerships: step.document.partnerships.map((partnership) =>
+          partnership.childIds.includes(casey) ? { ...partnership, marriageDate: "1980-06-01" } : partnership,
+        ),
+      },
+    };
     const layout = layoutTree(setFocus(step.document, casey));
     if (!layout) throw new Error("Expected a layout");
 
@@ -46,6 +55,7 @@ describe("layoutTree", () => {
     expect(Math.abs(card("Blair").x - (card("Alex").x + CARD_WIDTH))).toBeLessThanOrEqual(CARD_WIDTH);
     expect(card("Finn").y).toBeGreaterThan(focus.y + CARD_HEIGHT);
     expect(layout.lines.length).toBeGreaterThan(0);
+    expect(layout.lines.some((line) => line.label === "m. 1980")).toBe(true);
 
     for (let index = 0; index < layout.cards.length; index += 1) {
       for (let other = index + 1; other < layout.cards.length; other += 1) {

@@ -152,6 +152,19 @@ export function addFirstPerson(
   };
 }
 
+export function updatePartnership(
+  doc: TreeDocument,
+  partnershipId: string,
+  patch: Partial<Pick<Partnership, "marriageDate" | "marriagePlace">>,
+): TreeDocument {
+  return {
+    ...doc,
+    partnerships: doc.partnerships.map((partnership) =>
+      partnership.id === partnershipId ? applyPartnershipPatch(partnership, patch) : partnership,
+    ),
+  };
+}
+
 export function updatePerson(
   doc: TreeDocument,
   personId: string,
@@ -171,11 +184,18 @@ export function setFocus(doc: TreeDocument, personId: string): TreeDocument {
 export function deletePerson(doc: TreeDocument, personId: string): TreeDocument {
   const people = doc.people.filter((person) => person.id !== personId);
   const partnerships = doc.partnerships
-    .map((partnership) => ({
-      ...partnership,
-      partnerIds: partnership.partnerIds.filter((id) => id !== personId),
-      childIds: partnership.childIds.filter((id) => id !== personId),
-    }))
+    .map((partnership) => {
+      const next: Partnership = {
+        ...partnership,
+        partnerIds: partnership.partnerIds.filter((id) => id !== personId),
+        childIds: partnership.childIds.filter((id) => id !== personId),
+      };
+      if (next.partnerIds.length < 2) {
+        delete next.marriageDate;
+        delete next.marriagePlace;
+      }
+      return next;
+    })
     .filter((partnership) => partnership.partnerIds.length > 0);
 
   let focusId = doc.focusId;
@@ -388,6 +408,19 @@ function replacementFocus(doc: TreeDocument, personId: string): string | null {
   const parent = parentsOf(doc, personId)[0];
   if (parent) return parent.id;
   return null;
+}
+
+function applyPartnershipPatch(
+  partnership: Partnership,
+  patch: Partial<Pick<Partnership, "marriageDate" | "marriagePlace">>,
+): Partnership {
+  const next: Partnership = { ...partnership, ...patch };
+  for (const key of ["marriageDate", "marriagePlace"] as const) {
+    const value = next[key]?.trim();
+    if (value) next[key] = value.slice(0, key === "marriagePlace" ? 160 : value.length);
+    else delete next[key];
+  }
+  return next;
 }
 
 function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): Person {

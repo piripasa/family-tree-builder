@@ -69,10 +69,13 @@ export function parseTreeDocument(input: unknown): ParseResult {
       children.add(childId);
     }
     seenPartnerships.add(entry.id);
+    const facts = readPartnershipFacts(entry);
+    if (!("fields" in facts)) return facts;
     partnerships.push({
       id: entry.id,
       partnerIds: [...entry.partnerIds],
       childIds: [...entry.childIds],
+      ...facts.fields,
     });
   }
 
@@ -102,6 +105,19 @@ export function parseTreeDocument(input: unknown): ParseResult {
   }
 
   return { ok: true, document };
+}
+
+function readPartnershipFacts(
+  entry: Record<string, unknown>,
+): { ok: true; fields: Partial<Partnership> } | ParseResult {
+  const fields: Partial<Partnership> = {};
+  const marriageDate = optionalDate(entry.marriageDate, "marriage date");
+  if (typeof marriageDate !== "string") return marriageDate;
+  if (marriageDate) fields.marriageDate = marriageDate;
+  const marriagePlace = optionalText(entry.marriagePlace, "marriage place", 160);
+  if (typeof marriagePlace !== "string") return marriagePlace;
+  if (marriagePlace) fields.marriagePlace = marriagePlace;
+  return { ok: true, fields };
 }
 
 function readProfile(

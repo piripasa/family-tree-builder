@@ -53,6 +53,30 @@ describe("parseTreeDocument", () => {
       living: false,
     });
     expect(parsed.document.people[1].living).toBe(false);
+    const married = parseTreeDocument(
+      sample({
+        partnerships: [
+          {
+            id: "parents",
+            partnerIds: ["ada", "ann"],
+            childIds: [],
+            marriageDate: "1815-07-01",
+            marriagePlace: " London ",
+          },
+        ],
+      }),
+    );
+    expect(married.ok && married.document.partnerships[0]).toMatchObject({
+      marriageDate: "1815-07-01",
+      marriagePlace: "London",
+    });
+    expect(
+      parseTreeDocument(
+        sample({
+          partnerships: [{ id: "parents", partnerIds: ["ada"], childIds: [], marriageDate: "July" }],
+        }),
+      ).ok,
+    ).toBe(false);
     const alive = parseTreeDocument({
       version: 1,
       people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", living: true }],

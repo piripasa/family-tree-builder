@@ -40,4 +40,36 @@ describe("sharedTree", () => {
     expect(shared.partnerships).toEqual(document.partnerships);
     expect(shared.focusId).toBe("ada");
   });
+
+  it("leaves out a marriage when a partner is marked alive", () => {
+    const document: TreeDocument = {
+      version: 1,
+      focusId: "ann",
+      people: [
+        { id: "ada", givenName: "Ada", familyName: "Lovelace", living: true },
+        { id: "ann", givenName: "Ann", familyName: "King", deathDate: "1852-11-27", living: false },
+        { id: "byron", givenName: "George", familyName: "Byron", deathDate: "1824-04-19", living: false },
+      ],
+      partnerships: [
+        {
+          id: "alive",
+          partnerIds: ["ada", "ann"],
+          childIds: [],
+          marriageDate: "1815-07-01",
+          marriagePlace: "London",
+        },
+        {
+          id: "past",
+          partnerIds: ["ann", "byron"],
+          childIds: [],
+          marriageDate: "1800-01-01",
+          marriagePlace: "London",
+        },
+      ],
+    };
+    const shared = sharedTree(document);
+    expect(shared.partnerships[0].marriageDate).toBeUndefined();
+    expect(shared.partnerships[0].marriagePlace).toBeUndefined();
+    expect(shared.partnerships[1]).toMatchObject({ marriageDate: "1800-01-01", marriagePlace: "London" });
+  });
 });
