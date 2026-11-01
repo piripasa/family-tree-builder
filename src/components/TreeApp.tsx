@@ -18,6 +18,7 @@ import {
   selectTree,
 } from "@/model/library";
 import { emptyHistory, pushHistory, redoHistory, undoHistory } from "@/model/history";
+import { mergePeople } from "@/model/merge";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { downloadReportPdf } from "@/model/report";
 import { sharedTree } from "@/model/share";
@@ -464,6 +465,7 @@ export function TreeApp() {
           onAddChild={(source, partnershipId) =>
             apply(addChild(document, document.focusId as string, source, partnershipId))
           }
+          onMerge={(otherId) => apply(mergePeople(document, document.focusId as string, otherId))}
           onDelete={onDelete}
         />
       ) : null}

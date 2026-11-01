@@ -27,6 +27,7 @@ export function EditorPanel({
   onAddParent,
   onAddPartner,
   onAddChild,
+  onMerge,
   onDelete,
 }: {
   document: TreeDocument;
@@ -40,6 +41,7 @@ export function EditorPanel({
   onAddParent: (source: RelativeSource) => boolean;
   onAddPartner: (source: RelativeSource) => boolean;
   onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
+  onMerge: (personId: string) => boolean;
   onDelete: (personId: string) => void;
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
@@ -260,6 +262,14 @@ export function EditorPanel({
           onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
         />
 
+        {document.people.length > 1 ? (
+          <MergeForm
+            person={person}
+            others={document.people.filter((item) => item.id !== person.id)}
+            onMerge={onMerge}
+          />
+        ) : null}
+
         <button type="button" className="danger" onClick={() => onDelete(person.id)}>
           Delete {displayName(person)}
         </button>
@@ -285,6 +295,75 @@ export function EditorPanel({
         </div>
       </div>
     </aside>
+  );
+}
+
+function MergeForm({
+  person,
+  others,
+  onMerge,
+}: {
+  person: Person;
+  others: Person[];
+  onMerge: (personId: string) => boolean;
+}) {
+  const [otherId, setOtherId] = useState(others[0]?.id ?? "");
+  const [confirming, setConfirming] = useState(false);
+  const other = others.find((item) => item.id === otherId);
+
+  useEffect(() => {
+    if (!others.some((item) => item.id === otherId)) {
+      setOtherId(others[0]?.id ?? "");
+      setConfirming(false);
+    }
+  }, [others, otherId]);
+
+  return (
+    <section className="adder merge">
+      <h3>Merge another record</h3>
+      <p className="hint">
+        This person&apos;s name stays. Empty details are filled from the other record, and that record is removed.
+      </p>
+      <label className="field">
+        Other record
+        <select
+          value={otherId}
+          onChange={(event) => {
+            setOtherId(event.target.value);
+            setConfirming(false);
+          }}
+        >
+          {others.map((item) => (
+            <option key={item.id} value={item.id}>
+              {personMenuLabel(item)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {confirming && other ? (
+        <div className="merge-actions">
+          <p>
+            Merge {displayName(other)} into {displayName(person)}? {displayName(other)} will be removed.
+          </p>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              if (onMerge(other.id)) setConfirming(false);
+            }}
+          >
+            Merge records
+          </button>
+          <button type="button" onClick={() => setConfirming(false)}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)} disabled={!other}>
+          Merge into this person
+        </button>
+      )}
+    </section>
   );
 }
 

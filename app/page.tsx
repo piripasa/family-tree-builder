@@ -8,7 +8,7 @@ const features = [
   },
   {
     title: "A full profile",
-    text: "Keep a photo, birth and death, places, and a note. A couple can also record a marriage date and place.",
+    text: "Keep a photo, birth and death, places, and a note. A couple can also record a marriage date and place. If the same person was entered twice, merge the two records.",
   },
   {
     title: "Living people stay private",
@@ -58,6 +58,11 @@ const questions = [
   {
     question: "What does the written report include?",
     answer: "Export, then Report, writes a PDF of the selected person's ancestors and descendants, with the dates, places, notes, and partners you recorded. The other PDF is the diagram. The report is a file you download, not the share link.",
+  },
+  {
+    question: "Can I merge two records of the same person?",
+    answer:
+      "Yes. Open one record and merge the other into it. This record keeps its name. Empty details are filled from the other record, and that record is removed. The merge is refused when the two records have different parents, or when joining them would make someone their own ancestor.",
   },
   {
     question: "Can the same person be their own ancestor?",

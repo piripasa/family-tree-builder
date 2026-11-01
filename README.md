@@ -1,6 +1,6 @@
 # Family tree
 
-Build a family tree in the browser. Start with one person, then add parents, a partner, and children. Click anyone to follow ancestors and descendants.
+Build a family tree in the browser. Start with one person, then add parents, a partner, and children. Click anyone to follow ancestors and descendants. If the same person was entered twice, merge those records into one.
 
 Without an account, this browser keeps one tree. Sign in to keep up to five trees and to create a view-only share link. People marked alive appear as Living on that link, without their photo, dates, places, or note.
 
