@@ -21,6 +21,7 @@ import {
 import type { Person, RelativeSource, TreeDocument } from "@/model/types";
 
 type Role = "parent" | "partner" | "child";
+type PanelTab = "profile" | "family" | "sources" | "people" | "record" | "suggestions";
 
 export function EditorPanel({
   document,
@@ -60,10 +61,15 @@ export function EditorPanel({
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [tab, setTab] = useState<PanelTab>("profile");
 
   useEffect(() => {
     setPhotoError(null);
   }, [person?.id]);
+
+  useEffect(() => {
+    if (tab === "suggestions" && suggestions.length === 0) setTab("profile");
+  }, [tab, suggestions.length]);
 
   if (!person) return null;
 
@@ -76,17 +82,19 @@ export function EditorPanel({
   const partners = partnersOf(document, person.id);
   const children = childrenOf(document, person.id);
   const partnerships = partnershipsAsPartner(document, person.id);
+  const couples = partnerships.filter((partnership) => partnership.partnerIds.length === 2);
+  const tabs: { id: PanelTab; label: string }[] = [
+    { id: "profile", label: "Profile" },
+    { id: "family", label: "Family" },
+    { id: "sources", label: "Sources" },
+    { id: "people", label: "People" },
+    { id: "record", label: "Record" },
+  ];
+  if (suggestions.length > 0) tabs.unshift({ id: "suggestions", label: "Suggestions" });
 
   return (
     <aside className="panel">
-      <div className="panel-scroll">
-        <SuggestionList
-          document={document}
-          suggestions={suggestions}
-          busy={suggestionBusy}
-          onAccept={onAcceptSuggestion}
-          onDecline={onDeclineSuggestion}
-        />
+      <header className="panel-head">
         {sharing ? (
           <p className="share-banner">
             Shared view. Living people stay in the tree and appear as Living, without their private details.
@@ -94,8 +102,42 @@ export function EditorPanel({
         ) : null}
         <p className="eyebrow">Selected person</p>
         <h2>{displayName(person)}</h2>
-        <p className="lede">Parents are above this person. Partners and children are below.</p>
+      </header>
+      <div className="panel-tabs" role="tablist" aria-label="Person details">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`person-tab-${item.id}`}
+            aria-selected={tab === item.id}
+            aria-controls={`person-panel-${item.id}`}
+            tabIndex={tab === item.id ? 0 : -1}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+            {item.id === "suggestions" ? <span className="tab-count">{suggestions.length}</span> : null}
+          </button>
+        ))}
+      </div>
+      <div
+        className="panel-tab"
+        role="tabpanel"
+        id={`person-panel-${tab}`}
+        aria-labelledby={`person-tab-${tab}`}
+      >
+        {tab === "suggestions" ? (
+          <SuggestionList
+            document={document}
+            suggestions={suggestions}
+            busy={suggestionBusy}
+            onAccept={onAcceptSuggestion}
+            onDecline={onDeclineSuggestion}
+          />
+        ) : null}
 
+        {tab === "profile" ? (
+        <>
         <label className="field">
           Given name
           <input
@@ -121,7 +163,7 @@ export function EditorPanel({
           />
           Alive
         </label>
-        <p className="hint">A share link leaves out the name, photo, dates, places, and note of anyone marked alive. A person with no mark keeps their details.</p>
+        <p className="hint">A share link shows someone marked alive only as Living.</p>
 
         <div className="photo-row">
           {person.photo ? (
@@ -206,35 +248,25 @@ export function EditorPanel({
         <label className="field">
           Note
           <textarea
-            rows={3}
+            rows={2}
             maxLength={2000}
             value={person.note ?? ""}
             onChange={(event) => onUpdate(person.id, { note: event.target.value })}
           />
         </label>
+        </>
+        ) : null}
 
-        <SourceEditor
-          key={person.id}
-          sources={(person.sources ?? []).filter((source) => source.fact !== "marriage")}
-          facts={alive ? ["name", "birth"] : ["name", "birth", "death"]}
-          onAdd={(input) => {
-            const result = addPersonSource(document, person.id, input);
-            if (!result.ok) return result.error;
-            onDocument(result.document);
-            return null;
-          }}
-          onRemove={(sourceId) => onDocument(removePersonSource(document, person.id, sourceId))}
-        />
+        {tab === "family" ? (
+        <>
+          <p className="hint">Parents sit above this person on the canvas. Partners and children sit below.</p>
+          <dl className="relations">
+            <RelationList label="Parents" people={parents} onFocus={onFocus} />
+            <RelationList label="Partners" people={partners} onFocus={onFocus} />
+            <RelationList label="Children" people={children} onFocus={onFocus} />
+          </dl>
 
-        <dl className="relations">
-          <RelationList label="Parents" people={parents} onFocus={onFocus} />
-          <RelationList label="Partners" people={partners} onFocus={onFocus} />
-          <RelationList label="Children" people={children} onFocus={onFocus} />
-        </dl>
-
-        {partnerships
-          .filter((partnership) => partnership.partnerIds.length === 2)
-          .map((partnership) => (
+        {couples.map((partnership) => (
             <fieldset key={partnership.id} className="marriage">
               <legend>{partnershipLabel(document, partnership, person.id)}</legend>
               <label className="field">
@@ -258,18 +290,6 @@ export function EditorPanel({
                   }
                 />
               </label>
-              <SourceEditor
-                key={`${partnership.id}-sources`}
-                sources={partnership.sources ?? []}
-                facts={["marriage"]}
-                onAdd={(input) => {
-                  const result = addMarriageSource(document, partnership.id, input);
-                  if (!result.ok) return result.error;
-                  onDocument(result.document);
-                  return null;
-                }}
-                onRemove={(sourceId) => onDocument(removeMarriageSource(document, partnership.id, sourceId))}
-              />
             </fieldset>
           ))}
 
@@ -307,22 +327,48 @@ export function EditorPanel({
           }))}
           onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
         />
-
-        {document.people.length > 1 ? (
-          <MergeForm
-            person={person}
-            others={document.people.filter((item) => item.id !== person.id)}
-            onMerge={onMerge}
-          />
+        </>
         ) : null}
 
-        <button type="button" className="danger" onClick={() => onDelete(person.id)}>
-          Delete {displayName(person)}
-        </button>
+        {tab === "sources" ? (
+        <>
+          <SourceEditor
+            key={person.id}
+            sources={(person.sources ?? []).filter((source) => source.fact !== "marriage")}
+            facts={alive ? ["name", "birth"] : ["name", "birth", "death"]}
+            onAdd={(input) => {
+              const result = addPersonSource(document, person.id, input);
+              if (!result.ok) return result.error;
+              onDocument(result.document);
+              return null;
+            }}
+            onRemove={(sourceId) => onDocument(removePersonSource(document, person.id, sourceId))}
+            heading={false}
+          />
+          {couples.map((partnership) => (
+            <fieldset key={`${partnership.id}-sources`} className="marriage">
+              <legend>{partnershipLabel(document, partnership, person.id)}</legend>
+              <SourceEditor
+                sources={partnership.sources ?? []}
+                facts={["marriage"]}
+                onAdd={(input) => {
+                  const result = addMarriageSource(document, partnership.id, input);
+                  if (!result.ok) return result.error;
+                  onDocument(result.document);
+                  return null;
+                }}
+                onRemove={(sourceId) => onDocument(removeMarriageSource(document, partnership.id, sourceId))}
+                heading={false}
+              />
+            </fieldset>
+          ))}
+        </>
+        ) : null}
 
-        <PersonFinder document={document} focusId={person.id} onFocus={onFocus} />
-
-        <div className="everyone">
+        {tab === "people" ? (
+        <>
+          <PersonFinder document={document} focusId={person.id} onFocus={onFocus} />
+          <div className="everyone">
           <h3>Everyone</h3>
           <ul>
             {document.people.map((item) => (
@@ -338,7 +384,24 @@ export function EditorPanel({
               </li>
             ))}
           </ul>
-        </div>
+          </div>
+        </>
+        ) : null}
+
+        {tab === "record" ? (
+        <>
+          {document.people.length > 1 ? (
+            <MergeForm
+              person={person}
+              others={document.people.filter((item) => item.id !== person.id)}
+              onMerge={onMerge}
+            />
+          ) : null}
+          <button type="button" className="danger" onClick={() => onDelete(person.id)}>
+            Delete {displayName(person)}
+          </button>
+        </>
+        ) : null}
       </div>
     </aside>
   );

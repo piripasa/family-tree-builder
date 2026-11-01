@@ -14,11 +14,13 @@ export function SourceEditor({
   facts,
   onAdd,
   onRemove,
+  heading = true,
 }: {
   sources: FactSource[];
   facts: SourceFact[];
   onAdd: (input: { fact: SourceFact; kind: SourceKind; detail: string }) => string | null;
   onRemove: (sourceId: string) => void;
+  heading?: boolean;
 }) {
   const [fact, setFact] = useState<SourceFact>(facts[0] ?? "name");
   const [kind, setKind] = useState<SourceKind>("person");
@@ -40,7 +42,7 @@ export function SourceEditor({
 
   return (
     <section className="sources">
-      <h3>Sources</h3>
+      {heading ? <h3>Sources</h3> : null}
       {facts.includes("marriage") ? null : (
         <p className="hint">
           A person, a certificate, or a short note for a fact. A share link leaves every source out.

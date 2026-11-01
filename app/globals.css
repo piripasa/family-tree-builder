@@ -103,7 +103,7 @@ h2,
 .app {
   height: 100dvh;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 380px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     "toolbar toolbar"
@@ -329,14 +329,96 @@ h2,
 .panel {
   grid-area: panel;
   min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid var(--edge);
   background: #f7f4ee;
 }
 
-.panel-scroll {
-  height: 100%;
+.panel-head {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem 0.45rem;
+  background: #f7f4ee;
+}
+
+.panel-tabs {
+  flex: none;
+  display: flex;
+  gap: 0.1rem;
+  padding: 0 0.45rem;
+  border-bottom: 1px solid var(--edge);
+  background: #f7f4ee;
+}
+
+.panel-tabs button {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.5rem 0.1rem 0.4rem;
+  font-size: 0.72rem;
+}
+
+.panel-tabs button[aria-selected="true"] {
+  color: var(--forest);
+  border-bottom-color: var(--forest);
+  font-weight: 700;
+}
+
+.panel-tabs button:hover {
+  border-color: transparent;
+  border-bottom-color: var(--edge);
+  color: var(--ink);
+}
+
+.panel-tabs button[aria-selected="true"]:hover {
+  border-bottom-color: var(--forest);
+  color: var(--forest);
+}
+
+.tab-count {
+  display: inline-block;
+  margin-left: 0.25rem;
+  min-width: 1.05rem;
+  padding: 0.02rem 0.28rem;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #f7f4ee;
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.panel-tab {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 1.25rem 1.1rem 2rem;
+  overscroll-behavior: contain;
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.panel-tab > .sources,
+.panel-tab .finder,
+.panel-tab .everyone,
+.panel-tab .suggestions {
+  margin: 0;
+}
+
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 1.1rem 1.1rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -349,7 +431,12 @@ h2,
   text-transform: uppercase;
 }
 
-.panel h2,
+.panel h2 {
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
 .empty-state h2 {
   font-size: 1.8rem;
   font-weight: 600;
