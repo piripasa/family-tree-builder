@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACCOUNT_TREE_LIMIT,
+  LOCAL_TREE_LIMIT,
   activeTree,
   addTree,
   createLibrary,
@@ -28,6 +30,18 @@ describe("library", () => {
     expect(activeTree(second).title).toBe("Family tree");
     expect(activeTree(second).document.people).toEqual([]);
     expect(addTree(second).trees.map((tree) => tree.title)).toEqual(["Lovelace", "Family tree", "Family tree 2"]);
+  });
+
+  it("keeps one tree on this device and five in an account", () => {
+    const only = createLibrary();
+    expect(addTree(only, LOCAL_TREE_LIMIT)).toBe(only);
+    let account = only;
+    for (let count = account.trees.length; count < ACCOUNT_TREE_LIMIT; count += 1) {
+      account = addTree(account, ACCOUNT_TREE_LIMIT);
+    }
+    expect(account.trees).toHaveLength(5);
+    expect(addTree(account, ACCOUNT_TREE_LIMIT)).toBe(account);
+    expect(parseStoredLibrary({ version: 1, trees: account.trees.concat(account.trees[0]) }).ok).toBe(false);
   });
 
   it("renames, switches, and replaces only the active tree", () => {

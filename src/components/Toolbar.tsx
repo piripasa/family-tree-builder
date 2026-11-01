@@ -22,6 +22,7 @@ export function Toolbar({
   onExportImage,
   onExportPdf,
   onShare,
+  shareNotice,
   onToggleShare,
   onZoomIn,
   onZoomOut,
@@ -48,6 +49,7 @@ export function Toolbar({
   onExportImage: () => void;
   onExportPdf: () => void;
   onShare: () => void;
+  shareNotice: { url: string; copied: boolean } | null;
   onToggleShare: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -130,6 +132,12 @@ export function Toolbar({
       {message ? (
         <p className="toolbar-message" role="alert">
           {message}
+        </p>
+      ) : null}
+      {shareNotice ? (
+        <p className="toolbar-notice">
+          {shareNotice.copied ? "Share link copied." : "Share link"}
+          <a href={shareNotice.url}>{shareNotice.url}</a>
         </p>
       ) : null}
     </header>

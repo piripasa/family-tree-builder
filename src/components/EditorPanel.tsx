@@ -97,7 +97,7 @@ export function EditorPanel({
           />
           Alive
         </label>
-        <p className="hint">A shared file leaves out the name, photo, dates, places, and note of anyone marked alive. A person with no mark keeps their details.</p>
+        <p className="hint">A share link leaves out the name, photo, dates, places, and note of anyone marked alive. A person with no mark keeps their details.</p>
 
         <div className="photo-row">
           {person.photo ? (

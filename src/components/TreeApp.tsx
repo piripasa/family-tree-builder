@@ -8,6 +8,8 @@ import { applyLibraryChanges, fetchSession, loadAccountLibrary, signIn, signOut,
 import { downloadGedcom, parseGedcom } from "@/model/gedcom";
 import { downloadTree, parseTreeDocument } from "@/model/io";
 import {
+  ACCOUNT_TREE_LIMIT,
+  LOCAL_TREE_LIMIT,
   activeTree,
   addTree,
   deleteActiveTree,
@@ -17,6 +19,7 @@ import {
 } from "@/model/library";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
+import { createShareLink } from "@/model/shareLink";
 import { loadLibrary, saveLibrary } from "@/model/storage";
 import { libraryChanges } from "@/model/sync";
 import {
@@ -41,6 +44,7 @@ export function TreeApp() {
   const [email, setEmail] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<{ url: string; copied: boolean } | null>(null);
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const canvasRef = useRef<TreeCanvasHandle>(null);
@@ -138,11 +142,17 @@ export function TreeApp() {
   }
 
   function onNew() {
+    const limit = source === "account" ? ACCOUNT_TREE_LIMIT : LOCAL_TREE_LIMIT;
+    if (shelf.trees.length >= limit) {
+      setMessage(source === "account" ? "An account can keep 5 trees." : "Sign in to keep more than one tree.");
+      return;
+    }
     setMessage(null);
+    setShareNotice(null);
     setGivenName("");
     setFamilyName("");
     setSharing(false);
-    setLibrary(addTree(shelf));
+    setLibrary(addTree(shelf, limit));
   }
 
   function onDeleteTree() {
@@ -159,6 +169,7 @@ export function TreeApp() {
       : `Delete ${title}? It will be removed from ${source === "account" ? "your account" : "this browser"}.`;
     if (!window.confirm(question)) return;
     setMessage(null);
+    setShareNotice(null);
     setGivenName("");
     setFamilyName("");
     setSharing(false);
@@ -246,7 +257,46 @@ export function TreeApp() {
     setEmail(null);
     setSharing(false);
     setMessage(null);
+    setShareNotice(null);
     setSource("local");
+  }
+
+  async function onShare() {
+    setShareNotice(null);
+    if (source !== "account") {
+      setMessage("Sign in to share a link.");
+      return;
+    }
+    setMessage(null);
+    const snapshot = shelf;
+    const treeId = activeTree(snapshot).id;
+    const pending = queueRef.current.then(async () => {
+      const before = remoteRef.current;
+      if (!before) throw new Error("Sign in to share a link.");
+      const changes = libraryChanges(before, snapshot);
+      if (changes.length > 0) {
+        await applyLibraryChanges(changes);
+        remoteRef.current = snapshot;
+      }
+      return createShareLink(treeId);
+    });
+    queueRef.current = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      const url = await pending;
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+      setShareNotice({ url, copied });
+    } catch (error) {
+      setMessage(error instanceof Error && error.message ? error.message : "The share link could not be created.");
+    }
   }
 
   function addRelative(source: RelativeSource, run: (source: RelativeSource) => TreeResult): boolean {
@@ -266,6 +316,7 @@ export function TreeApp() {
         onSelectTree={(id) => {
           setSharing(false);
           setMessage(null);
+          setShareNotice(null);
           setGivenName("");
           setFamilyName("");
           setLibrary(selectTree(shelf, id));
@@ -288,7 +339,10 @@ export function TreeApp() {
             () => setMessage("The PDF could not be created."),
           );
         }}
-        onShare={() => downloadTree(sharedTree(document), "family-tree-shared.json")}
+        onShare={() => {
+          void onShare();
+        }}
+        shareNotice={shareNotice}
         onToggleShare={() => setSharing((value) => !value)}
         onZoomIn={() => canvasRef.current?.zoomIn()}
         onZoomOut={() => canvasRef.current?.zoomOut()}

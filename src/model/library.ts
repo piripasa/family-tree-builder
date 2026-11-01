@@ -4,7 +4,8 @@ import type { SavedTree, TreeDocument, TreeLibrary } from "./types";
 
 const TREE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const MAX_STORED_TREES = 40;
+export const LOCAL_TREE_LIMIT = 1;
+export const ACCOUNT_TREE_LIMIT = 5;
 export const MAX_DOCUMENT_CHARS = 8_000_000;
 
 export function createLibrary(document = createEmptyDocument(), title = "Family tree"): TreeLibrary {
@@ -39,7 +40,8 @@ export function selectTree(library: TreeLibrary, id: string): TreeLibrary {
   return { ...library, activeId: id };
 }
 
-export function addTree(library: TreeLibrary): TreeLibrary {
+export function addTree(library: TreeLibrary, limit = ACCOUNT_TREE_LIMIT): TreeLibrary {
+  if (library.trees.length >= limit) return library;
   const tree = createSavedTree(nextTitle(library.trees), createEmptyDocument());
   return { ...library, activeId: tree.id, trees: [...library.trees, tree] };
 }
@@ -65,7 +67,7 @@ export function parseStoredLibrary(
   input: unknown,
   limits: { trees?: number; chars?: number } = {},
 ): { ok: true; library: TreeLibrary } | { ok: false; error: string } {
-  const maxTrees = limits.trees ?? MAX_STORED_TREES;
+  const maxTrees = limits.trees ?? ACCOUNT_TREE_LIMIT;
   const maxChars = limits.chars ?? MAX_DOCUMENT_CHARS;
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return { ok: false, error: "That account library is unreadable." };
@@ -74,8 +76,11 @@ export function parseStoredLibrary(
   if (record.version !== 1 || !Array.isArray(record.trees)) {
     return { ok: false, error: "That account library is unreadable." };
   }
-  if (record.trees.length < 1 || record.trees.length > maxTrees) {
-    return { ok: false, error: "That account has an unsupported number of trees." };
+  if (record.trees.length < 1) {
+    return { ok: false, error: "That account library is unreadable." };
+  }
+  if (record.trees.length > maxTrees) {
+    return { ok: false, error: "An account can keep 5 trees." };
   }
 
   const trees: SavedTree[] = [];

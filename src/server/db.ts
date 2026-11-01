@@ -74,6 +74,14 @@ async function migrate(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT now(),
       PRIMARY KEY (owner_id, id)
     );
+    CREATE TABLE IF NOT EXISTS shares (
+      token text PRIMARY KEY,
+      owner_id text NOT NULL,
+      tree_id text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (owner_id, tree_id),
+      FOREIGN KEY (owner_id, tree_id) REFERENCES trees (owner_id, id) ON DELETE CASCADE
+    );
   `);
 }
 

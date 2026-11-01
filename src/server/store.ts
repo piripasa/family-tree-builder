@@ -1,7 +1,9 @@
-import { createLibrary } from "@/model/library";
+import { ACCOUNT_TREE_LIMIT, createLibrary } from "@/model/library";
 import { parseTreeDocument } from "@/model/io";
-import type { SavedTree, TreeLibrary } from "@/model/types";
+import { sharedTree } from "@/model/share";
+import type { SavedTree, TreeDocument, TreeLibrary } from "@/model/types";
 import { withDatabase, withTransaction, type Queryable } from "./db";
+import { newSessionToken } from "./tokens";
 
 export class AccountConflict extends Error {
   constructor(message: string) {
@@ -78,7 +80,13 @@ export async function loadOwnedLibrary(userId: string): Promise<TreeLibrary> {
 
 export async function insertOwnedTree(userId: string, tree: SavedTree): Promise<void> {
   try {
-    await withDatabase(async (db) => {
+    await withTransaction(async (db) => {
+      const count = await db.query<{ count: number }>("SELECT count(*)::int AS count FROM trees WHERE owner_id = $1", [
+        userId,
+      ]);
+      if ((count.rows[0]?.count ?? 0) >= ACCOUNT_TREE_LIMIT) {
+        throw new AccountConflict("An account can keep 5 trees.");
+      }
       await insertTree(db, userId, tree);
     });
   } catch (error) {
@@ -104,6 +112,49 @@ export async function deleteOwnedTree(userId: string, treeId: string): Promise<v
     const result = await db.query("DELETE FROM trees WHERE owner_id = $1 AND id = $2", [userId, treeId]);
     if (result.rowCount !== 1) throw new AccountMissing("That tree is not in this account.");
     await db.query("UPDATE users SET active_tree_id = NULL WHERE id = $1 AND active_tree_id = $2", [userId, treeId]);
+  });
+}
+
+export async function ensureShare(userId: string, treeId: string): Promise<string> {
+  return withDatabase(async (db) => {
+    const owned = await db.query("SELECT 1 FROM trees WHERE owner_id = $1 AND id = $2", [userId, treeId]);
+    if (owned.rowCount !== 1) throw new AccountMissing("That tree is not in this account.");
+    const existing = await db.query<{ token: string }>(
+      "SELECT token FROM shares WHERE owner_id = $1 AND tree_id = $2",
+      [userId, treeId],
+    );
+    if (existing.rows[0]) return existing.rows[0].token;
+    const token = newSessionToken();
+    try {
+      await db.query("INSERT INTO shares (token, owner_id, tree_id) VALUES ($1, $2, $3)", [token, userId, treeId]);
+      return token;
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+        const again = await db.query<{ token: string }>(
+          "SELECT token FROM shares WHERE owner_id = $1 AND tree_id = $2",
+          [userId, treeId],
+        );
+        if (again.rows[0]) return again.rows[0].token;
+      }
+      throw error;
+    }
+  });
+}
+
+export async function loadSharedByToken(token: string): Promise<{ title: string; document: TreeDocument } | null> {
+  return withDatabase(async (db) => {
+    const result = await db.query<{ title: string; document: unknown }>(
+      `SELECT trees.title, trees.document
+       FROM shares
+       JOIN trees ON trees.owner_id = shares.owner_id AND trees.id = shares.tree_id
+       WHERE shares.token = $1`,
+      [token],
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    const parsed = parseTreeDocument(row.document);
+    if (!parsed.ok) return null;
+    return { title: row.title, document: sharedTree(parsed.document) };
   });
 }
 
