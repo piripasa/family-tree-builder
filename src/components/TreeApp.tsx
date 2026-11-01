@@ -369,6 +369,7 @@ export function TreeApp() {
             apply(addChild(document, document.focusId as string, source, partnershipId))
           }
           onDelete={onDelete}
+          onDocument={updateDocument}
         />
       ) : null}
       {hasPeople ? (

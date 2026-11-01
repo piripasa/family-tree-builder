@@ -193,6 +193,7 @@ export function deletePerson(doc: TreeDocument, personId: string): TreeDocument 
       if (next.partnerIds.length < 2) {
         delete next.marriageDate;
         delete next.marriagePlace;
+        delete next.sources;
       }
       return next;
     })
@@ -429,6 +430,11 @@ function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): P
     delete next.deathDate;
     delete next.deathPlace;
     next.living = true;
+    if (next.sources) {
+      const sources = next.sources.filter((source) => source.fact !== "death");
+      if (sources.length > 0) next.sources = sources;
+      else delete next.sources;
+    }
   } else if (patch.living === false) {
     next.living = false;
   } else if (typeof patch.deathDate === "string" && patch.deathDate.trim() !== "") {

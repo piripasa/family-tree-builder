@@ -1,3 +1,14 @@
+export type SourceFact = "name" | "birth" | "death" | "marriage";
+
+export type SourceKind = "person" | "certificate" | "note";
+
+export type FactSource = {
+  id: string;
+  fact: SourceFact;
+  kind: SourceKind;
+  detail: string;
+};
+
 export type Person = {
   id: string;
   givenName: string;
@@ -9,6 +20,7 @@ export type Person = {
   deathPlace?: string;
   note?: string;
   living?: boolean;
+  sources?: FactSource[];
 };
 
 export type Partnership = {
@@ -17,6 +29,7 @@ export type Partnership = {
   childIds: string[];
   marriageDate?: string;
   marriagePlace?: string;
+  sources?: FactSource[];
 };
 
 export type TreeDocument = {

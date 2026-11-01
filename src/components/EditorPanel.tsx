@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { SourceEditor } from "@/components/SourceEditor";
 import { readProfilePhoto } from "@/model/photo";
+import { addMarriageSource, addPersonSource, removeMarriageSource, removePersonSource } from "@/model/source";
 import {
   childrenOf,
   displayName,
@@ -27,6 +29,7 @@ export function EditorPanel({
   onAddPartner,
   onAddChild,
   onDelete,
+  onDocument,
 }: {
   document: TreeDocument;
   sharing: boolean;
@@ -40,6 +43,7 @@ export function EditorPanel({
   onAddPartner: (source: RelativeSource) => boolean;
   onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
   onDelete: (personId: string) => void;
+  onDocument: (document: TreeDocument) => void;
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -189,6 +193,19 @@ export function EditorPanel({
           />
         </label>
 
+        <SourceEditor
+          key={person.id}
+          sources={(person.sources ?? []).filter((source) => source.fact !== "marriage")}
+          facts={alive ? ["name", "birth"] : ["name", "birth", "death"]}
+          onAdd={(input) => {
+            const result = addPersonSource(document, person.id, input);
+            if (!result.ok) return result.error;
+            onDocument(result.document);
+            return null;
+          }}
+          onRemove={(sourceId) => onDocument(removePersonSource(document, person.id, sourceId))}
+        />
+
         <dl className="relations">
           <RelationList label="Parents" people={parents} onFocus={onFocus} />
           <RelationList label="Partners" people={partners} onFocus={onFocus} />
@@ -221,6 +238,18 @@ export function EditorPanel({
                   }
                 />
               </label>
+              <SourceEditor
+                key={`${partnership.id}-sources`}
+                sources={partnership.sources ?? []}
+                facts={["marriage"]}
+                onAdd={(input) => {
+                  const result = addMarriageSource(document, partnership.id, input);
+                  if (!result.ok) return result.error;
+                  onDocument(result.document);
+                  return null;
+                }}
+                onRemove={(sourceId) => onDocument(removeMarriageSource(document, partnership.id, sourceId))}
+              />
             </fieldset>
           ))}
 

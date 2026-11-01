@@ -8,7 +8,7 @@ const features = [
   },
   {
     title: "A full profile",
-    text: "Keep a photo, birth and death, places, and a note. A couple can also record a marriage date and place.",
+    text: "Keep a photo, birth and death, places, and a note. Record where a fact came from. A couple can also record a marriage date and place.",
   },
   {
     title: "Living people stay private",
@@ -53,7 +53,11 @@ const questions = [
   },
   {
     question: "What does a share link show?",
-    answer: "Only the shared view. People marked alive appear as Living. Everyone else keeps the details you recorded. The page has no editor.",
+    answer: "Only the shared view. People marked alive appear as Living. Everyone else keeps the details you recorded. Sources stay off that page. The page has no editor.",
+  },
+  {
+    question: "Can I record where a fact came from?",
+    answer: "Yes. On a person, or on a couple, add a source: someone who told you, a certificate, or a short note. It stays in the tree and in an exported file. A share link leaves it out.",
   },
   {
     question: "Can the same person be their own ancestor?",
@@ -146,6 +150,7 @@ export default function HomePage() {
           <ul>
             <li>The public page is the shared view, with no way back to the private record.</li>
             <li>Marriage details are hidden when either partner is marked alive.</li>
+            <li>Sources stay off the share link, including for people whose other details are shown.</li>
             <li>Your own Shared view button is a preview. The link is the copy other people open.</li>
           </ul>
         </section>

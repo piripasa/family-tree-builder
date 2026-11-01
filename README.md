@@ -2,7 +2,7 @@
 
 Build a family tree in the browser. Start with one person, then add parents, a partner, and children. Click anyone to follow ancestors and descendants.
 
-Without an account, this browser keeps one tree. Sign in to keep up to five trees and to create a view-only share link. People marked alive appear as Living on that link, without their photo, dates, places, or note.
+Without an account, this browser keeps one tree. Sign in to keep up to five trees and to create a view-only share link. People marked alive appear as Living on that link, without their photo, dates, places, or note. A source for a fact — a person, a certificate, or a short note — stays in your tree and out of that link.
 
 You can also export JSON, GEDCOM, a picture, or a printable PDF, and import JSON or GEDCOM.
 
