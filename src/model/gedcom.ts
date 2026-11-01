@@ -1,5 +1,5 @@
 import { parseTreeDocument, type ParseResult } from "./io";
-import type { Partnership, Person, TreeDocument } from "./types";
+import type { FactSource, Partnership, Person, SourceKind, TreeDocument } from "./types";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 
@@ -24,12 +24,13 @@ export function exportGedcom(document: TreeDocument): string {
     const id = ids.get(person.id);
     lines.push(`0 ${id} INDI`);
     writeValue(lines, 1, "NAME", `${person.givenName.trim()} /${person.familyName.trim().replaceAll("/", "")}/`);
-    writeEvent(lines, "BIRT", person.birthDate, person.birthPlace);
+    writeFactSources(lines, 2, person.sources, "name");
+    writeEvent(lines, "BIRT", person.birthDate, person.birthPlace, person.sources, "birth");
     if (person.living === true && !person.deathDate) writeValue(lines, 1, "_LIV", "Y");
-    if (person.deathDate || person.deathPlace || person.living === false) {
-      if (person.deathDate || person.deathPlace) writeEvent(lines, "DEAT", person.deathDate, person.deathPlace);
-      else writeValue(lines, 1, "DEAT", "Y");
-    }
+    const deathCited = person.sources?.some((source) => source.fact === "death") ?? false;
+    if (person.deathDate || person.deathPlace || deathCited) {
+      writeEvent(lines, "DEAT", person.deathDate, person.deathPlace, person.sources, "death");
+    } else if (person.living === false) writeValue(lines, 1, "DEAT", "Y");
     if (person.note?.trim()) writeValue(lines, 1, "NOTE", person.note.trim());
     for (const partnership of document.partnerships) {
       const family = familyId(document, partnership.id);
@@ -46,8 +47,8 @@ export function exportGedcom(document: TreeDocument): string {
     for (const childId of partnership.childIds) {
       if (ids.has(childId)) lines.push(`1 CHIL ${ids.get(childId)}`);
     }
-    if (partnership.marriageDate || partnership.marriagePlace) {
-      writeEvent(lines, "MARR", partnership.marriageDate, partnership.marriagePlace);
+    if (partnership.marriageDate || partnership.marriagePlace || partnership.sources?.length) {
+      writeEvent(lines, "MARR", partnership.marriageDate, partnership.marriagePlace, partnership.sources, "marriage");
     }
   });
 
@@ -72,6 +73,10 @@ export function parseGedcom(text: string): ParseResult {
     const name = splitName(textOf(findChild(individual, "NAME")));
     const birth = readEvent(individual, "BIRT");
     const death = readEvent(individual, "DEAT");
+    const nameSources = sourcesOn(findChild(individual, "NAME"), "name");
+    if (!nameSources.ok) return nameSources;
+    if (!birth.sources.ok) return birth.sources;
+    if (!death.sources.ok) return death.sources;
     const markedAlive = findChild(individual, "_LIV")?.value.trim().toUpperCase() === "Y";
     const person: Person = {
       id,
@@ -82,6 +87,8 @@ export function parseGedcom(text: string): ParseResult {
     if (birth.place) person.birthPlace = birth.place.slice(0, 160);
     if (death.date) person.deathDate = death.date;
     if (death.place) person.deathPlace = death.place.slice(0, 160);
+    const sources = [...nameSources.sources, ...birth.sources.sources, ...death.sources.sources];
+    if (sources.length > 0) person.sources = sources;
     const note = textOf(findChild(individual, "NOTE")).trim().slice(0, 2000);
     if (note) person.note = note;
     if (death.present || (markedAlive && death.date)) person.living = false;
@@ -106,6 +113,11 @@ export function parseGedcom(text: string): ParseResult {
     };
     if (marriage.date) partnership.marriageDate = marriage.date;
     if (marriage.place) partnership.marriagePlace = marriage.place.slice(0, 160);
+    if (!marriage.sources.ok) return marriage.sources;
+    if (marriage.sources.sources.length > 0) {
+      if (partnership.partnerIds.length < 2) return fail("A marriage source in that file needs both partners.");
+      partnership.sources = marriage.sources.sources;
+    }
     partnerships.push(partnership);
   }
 
@@ -137,11 +149,33 @@ function familyId(document: TreeDocument, partnershipId: string): string {
   return `@F${index + 1}@`;
 }
 
-function writeEvent(lines: string[], tag: string, date: string | undefined, place: string | undefined): void {
-  if (!date && !place) return;
+function writeEvent(
+  lines: string[],
+  tag: string,
+  date: string | undefined,
+  place: string | undefined,
+  sources: FactSource[] | undefined,
+  fact: FactSource["fact"],
+): void {
+  const cited = (sources ?? []).filter((source) => source.fact === fact);
+  if (!date && !place && cited.length === 0) return;
   lines.push(`1 ${tag}`);
   if (date) lines.push(`2 DATE ${gedcomDate(date)}`);
   if (place?.trim()) writeValue(lines, 2, "PLAC", place.trim());
+  writeFactSources(lines, 2, cited, fact);
+}
+
+function writeFactSources(
+  lines: string[],
+  level: number,
+  sources: FactSource[] | undefined,
+  fact: FactSource["fact"],
+): void {
+  for (const source of sources ?? []) {
+    if (source.fact !== fact) continue;
+    lines.push(`${level} _SRC ${source.kind}`);
+    writeValue(lines, level + 1, "NOTE", source.detail);
+  }
 }
 
 function writeValue(lines: string[], level: number, tag: string, value: string): void {
@@ -225,12 +259,37 @@ function splitName(value: string): { given: string; family: string } {
   };
 }
 
-function readEvent(individual: GedNode, tag: string): { present: boolean; date?: string; place?: string } {
+function readEvent(
+  individual: GedNode,
+  tag: string,
+): { present: boolean; date?: string; place?: string; sources: ReturnType<typeof sourcesOn> } {
   const event = findChild(individual, tag);
-  if (!event) return { present: false };
+  if (!event) return { present: false, sources: { ok: true, sources: [] } };
   const date = isoDate(textOf(findChild(event, "DATE")).trim());
   const place = textOf(findChild(event, "PLAC")).trim();
-  return { present: true, date, place: place || undefined };
+  const fact = tag === "BIRT" ? "birth" : tag === "DEAT" ? "death" : "marriage";
+  return { present: true, date, place: place || undefined, sources: sourcesOn(event, fact) };
+}
+
+function sourcesOn(
+  node: GedNode | undefined,
+  fact: FactSource["fact"],
+): { ok: true; sources: FactSource[] } | { ok: false; error: string } {
+  if (!node) return { ok: true, sources: [] };
+  const sources: FactSource[] = [];
+  for (const child of node.children) {
+    if (child.tag !== "_SRC") continue;
+    const kind = child.value.trim();
+    if (!isSourceKind(kind)) return { ok: false, error: "A source in that file is unreadable." };
+    const detail = textOf(findChild(child, "NOTE")).trim();
+    if (!detail) return { ok: false, error: "A source in that file is unreadable." };
+    sources.push({ id: crypto.randomUUID(), fact, kind, detail });
+  }
+  return { ok: true, sources };
+}
+
+function isSourceKind(value: string): value is SourceKind {
+  return value === "person" || value === "certificate" || value === "note";
 }
 
 function isoDate(value: string): string | undefined {

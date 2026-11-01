@@ -1,3 +1,4 @@
+import { parseFactSources } from "./source";
 import { createsAncestorCycle } from "./tree";
 import type { Partnership, Person, TreeDocument } from "./types";
 
@@ -117,6 +118,14 @@ function readPartnershipFacts(
   const marriagePlace = optionalText(entry.marriagePlace, "marriage place", 160);
   if (typeof marriagePlace !== "string") return marriagePlace;
   if (marriagePlace) fields.marriagePlace = marriagePlace;
+  const sources = parseFactSources(entry.sources, ["marriage"], "couple");
+  if (!sources.ok) return sources;
+  if (sources.sources) {
+    if (!Array.isArray(entry.partnerIds) || entry.partnerIds.length < 2) {
+      return fail("A marriage source in that file needs both partners.");
+    }
+    fields.sources = sources.sources;
+  }
   return { ok: true, fields };
 }
 
@@ -147,6 +156,14 @@ function readProfile(
   }
   if (entry.living === true && !fields.deathDate) fields.living = true;
   else if (entry.living === false || entry.living === true) fields.living = false;
+  const sources = parseFactSources(entry.sources, ["name", "birth", "death"], "person");
+  if (!sources.ok) return sources;
+  if (sources.sources) {
+    if (fields.living === true && sources.sources.some((source) => source.fact === "death")) {
+      return fail("A living person in that file has a death source.");
+    }
+    fields.sources = sources.sources;
+  }
   return { ok: true, fields };
 }
 

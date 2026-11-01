@@ -400,6 +400,43 @@ button:focus-visible,
   color: var(--muted);
 }
 
+.sources {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.35rem 0 0.2rem;
+}
+
+.sources h3 {
+  font-size: 0.95rem;
+}
+
+.sources ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.source {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: rgba(255, 252, 247, 0.8);
+}
+
+.source p {
+  margin: 0;
+}
+
+.source button {
+  flex: none;
+}
+
 .text-link,
 .person-link {
   border: 0;

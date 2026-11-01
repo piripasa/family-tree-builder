@@ -526,6 +526,10 @@ export function TreeApp() {
           }
           onMerge={(otherId) => apply(mergePeople(document, document.focusId as string, otherId))}
           onDelete={onDelete}
+          onDocument={(next) => {
+            remember(`sources:${crypto.randomUUID()}`);
+            updateDocument(next);
+          }}
         />
       ) : null}
       {hasPeople ? (
