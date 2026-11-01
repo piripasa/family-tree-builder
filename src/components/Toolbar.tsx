@@ -29,6 +29,8 @@ export function Toolbar({
   onExportReport,
   onShare,
   shareNotice,
+  onReplaceShare,
+  onRevokeShare,
   onToggleShare,
   onZoomIn,
   onZoomOut,
@@ -61,6 +63,8 @@ export function Toolbar({
   onExportReport: () => void;
   onShare: () => void;
   shareNotice: { url: string; copied: boolean } | null;
+  onReplaceShare: () => void;
+  onRevokeShare: () => void;
   onToggleShare: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -156,8 +160,14 @@ export function Toolbar({
       ) : null}
       {shareNotice ? (
         <p className="toolbar-notice">
-          {shareNotice.copied ? "Share link copied." : "Share link"}
+          <span>{shareNotice.copied ? "Share link copied." : "Share link"}</span>
           <a href={shareNotice.url}>{shareNotice.url}</a>
+          <button type="button" onClick={onReplaceShare}>
+            Replace link
+          </button>
+          <button type="button" onClick={onRevokeShare}>
+            Turn off
+          </button>
         </p>
       ) : null}
     </header>

@@ -115,10 +115,14 @@ export async function deleteOwnedTree(userId: string, treeId: string): Promise<v
   });
 }
 
+async function ownedTree(db: Queryable, userId: string, treeId: string): Promise<void> {
+  const owned = await db.query("SELECT 1 FROM trees WHERE owner_id = $1 AND id = $2", [userId, treeId]);
+  if (owned.rowCount !== 1) throw new AccountMissing("That tree is not in this account.");
+}
+
 export async function ensureShare(userId: string, treeId: string): Promise<string> {
   return withDatabase(async (db) => {
-    const owned = await db.query("SELECT 1 FROM trees WHERE owner_id = $1 AND id = $2", [userId, treeId]);
-    if (owned.rowCount !== 1) throw new AccountMissing("That tree is not in this account.");
+    await ownedTree(db, userId, treeId);
     const existing = await db.query<{ token: string }>(
       "SELECT token FROM shares WHERE owner_id = $1 AND tree_id = $2",
       [userId, treeId],
@@ -135,6 +139,49 @@ export async function ensureShare(userId: string, treeId: string): Promise<strin
           [userId, treeId],
         );
         if (again.rows[0]) return again.rows[0].token;
+      }
+      throw error;
+    }
+  });
+}
+
+export async function findShare(userId: string, treeId: string): Promise<string | null> {
+  return withDatabase(async (db) => {
+    await ownedTree(db, userId, treeId);
+    const existing = await db.query<{ token: string }>(
+      "SELECT token FROM shares WHERE owner_id = $1 AND tree_id = $2",
+      [userId, treeId],
+    );
+    return existing.rows[0]?.token ?? null;
+  });
+}
+
+export async function revokeShare(userId: string, treeId: string): Promise<void> {
+  return withDatabase(async (db) => {
+    await ownedTree(db, userId, treeId);
+    await db.query("DELETE FROM shares WHERE owner_id = $1 AND tree_id = $2", [userId, treeId]);
+  });
+}
+
+export async function replaceShare(userId: string, treeId: string): Promise<string> {
+  return withDatabase(async (db) => {
+    await ownedTree(db, userId, treeId);
+    const token = newSessionToken();
+    const updated = await db.query(
+      "UPDATE shares SET token = $3, created_at = now() WHERE owner_id = $1 AND tree_id = $2",
+      [userId, treeId, token],
+    );
+    if (updated.rowCount === 1) return token;
+    try {
+      await db.query("INSERT INTO shares (token, owner_id, tree_id) VALUES ($1, $2, $3)", [token, userId, treeId]);
+      return token;
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+        const again = await db.query(
+          "UPDATE shares SET token = $3, created_at = now() WHERE owner_id = $1 AND tree_id = $2",
+          [userId, treeId, token],
+        );
+        if (again.rowCount === 1) return token;
       }
       throw error;
     }

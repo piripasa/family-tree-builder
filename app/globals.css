@@ -199,14 +199,22 @@ h2,
 
 .toolbar-notice {
   flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
   font-size: 0.92rem;
   line-height: 1.45;
 }
 
 .toolbar-notice a {
   color: var(--forest);
-  margin-left: 0.35rem;
   word-break: break-all;
+}
+
+.toolbar-notice button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
 }
 
 .shared-details {
