@@ -20,6 +20,8 @@ import {
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
 import { createShareLink } from "@/model/shareLink";
+import { acceptSuggestion, declineSuggestion, loadSuggestions } from "@/model/suggestionClient";
+import type { StoredSuggestion } from "@/model/suggestion";
 import { loadLibrary, saveLibrary } from "@/model/storage";
 import { libraryChanges } from "@/model/sync";
 import {
@@ -45,11 +47,15 @@ export function TreeApp() {
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<{ url: string; copied: boolean } | null>(null);
+  const [suggestions, setSuggestions] = useState<StoredSuggestion[]>([]);
+  const [suggestionBusy, setSuggestionBusy] = useState(false);
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const canvasRef = useRef<TreeCanvasHandle>(null);
   const remoteRef = useRef<TreeLibrary | null>(null);
   const queueRef = useRef(Promise.resolve());
+  const saveGeneration = useRef(0);
+  const suggestionLock = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,9 +97,11 @@ export function TreeApp() {
       return;
     }
     const snapshot = library;
+    const generation = saveGeneration.current;
     const handle = window.setTimeout(() => {
       queueRef.current = queueRef.current
         .then(async () => {
+          if (saveGeneration.current !== generation) return;
           const before = remoteRef.current;
           if (!before) return;
           const changes = libraryChanges(before, snapshot);
@@ -108,6 +116,33 @@ export function TreeApp() {
     }, 400);
     return () => window.clearTimeout(handle);
   }, [library, source]);
+
+  const suggestionTreeId = source === "account" && library ? activeTree(library).id : null;
+  useEffect(() => {
+    if (!suggestionTreeId) {
+      setSuggestions([]);
+      return;
+    }
+    const treeId = suggestionTreeId;
+    let cancelled = false;
+    async function load() {
+      try {
+        const items = await loadSuggestions(treeId);
+        if (!cancelled) setSuggestions(items);
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      }
+    }
+    void load();
+    function onFocus() {
+      void load();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [suggestionTreeId]);
 
   if (!library || !source) {
     return <main className="app loading">Loading family tree…</main>;
@@ -299,6 +334,52 @@ export function TreeApp() {
     }
   }
 
+  async function reviewSuggestion(suggestionId: string, run: (treeId: string, suggestionId: string) => Promise<void>) {
+    if (source !== "account" || suggestionLock.current) return;
+    suggestionLock.current = true;
+    setSuggestionBusy(true);
+    setMessage(null);
+    const snapshot = shelf;
+    const treeId = activeTree(snapshot).id;
+    saveGeneration.current += 1;
+    const pending = queueRef.current.then(async () => {
+      const before = remoteRef.current;
+      if (!before) throw new Error("Sign in to review suggestions.");
+      const changes = libraryChanges(before, snapshot);
+      if (changes.length > 0) {
+        await applyLibraryChanges(changes);
+        remoteRef.current = snapshot;
+      }
+      await run(treeId, suggestionId);
+    });
+    queueRef.current = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      await pending;
+      setSuggestions((items) => items.filter((item) => item.id !== suggestionId));
+    } catch (error) {
+      setMessage(error instanceof Error && error.message ? error.message : "That suggestion could not be reviewed.");
+    } finally {
+      suggestionLock.current = false;
+      setSuggestionBusy(false);
+    }
+  }
+
+  function onAcceptSuggestion(suggestionId: string) {
+    void reviewSuggestion(suggestionId, async (treeId, id) => {
+      const nextDocument = await acceptSuggestion(treeId, id);
+      const next = replaceActive(remoteRef.current ?? shelf, nextDocument);
+      remoteRef.current = next;
+      setLibrary(next);
+    });
+  }
+
+  function onDeclineSuggestion(suggestionId: string) {
+    void reviewSuggestion(suggestionId, declineSuggestion);
+  }
+
   function addRelative(source: RelativeSource, run: (source: RelativeSource) => TreeResult): boolean {
     return apply(run(source));
   }
@@ -369,6 +450,10 @@ export function TreeApp() {
             apply(addChild(document, document.focusId as string, source, partnershipId))
           }
           onDelete={onDelete}
+          suggestions={suggestions}
+          suggestionBusy={suggestionBusy}
+          onAcceptSuggestion={onAcceptSuggestion}
+          onDeclineSuggestion={onDeclineSuggestion}
         />
       ) : null}
       {hasPeople ? (

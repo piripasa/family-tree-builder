@@ -24,7 +24,7 @@ const features = [
   },
   {
     title: "One link, view only",
-    text: "A signed-in tree gets a stable link. Anyone who opens it sees the shared view and cannot edit the record.",
+    text: "A signed-in tree gets a stable link. Anyone who opens it can suggest a person, a date, or a correction. You accept it before the tree changes.",
   },
 ];
 
@@ -54,6 +54,10 @@ const questions = [
   {
     question: "What does a share link show?",
     answer: "Only the shared view. People marked alive appear as Living. Everyone else keeps the details you recorded. The page has no editor.",
+  },
+  {
+    question: "Can someone suggest a change?",
+    answer: "Yes, from the share link. They can suggest a person, a date, or a correction. Nothing changes until you accept it. Living people's private details stay off that page.",
   },
   {
     question: "Can the same person be their own ancestor?",

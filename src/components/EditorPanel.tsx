@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { readProfilePhoto } from "@/model/photo";
+import { SuggestionList } from "@/components/SuggestionList";
+import type { StoredSuggestion } from "@/model/suggestion";
 import {
   childrenOf,
   displayName,
@@ -27,6 +29,10 @@ export function EditorPanel({
   onAddPartner,
   onAddChild,
   onDelete,
+  suggestions,
+  suggestionBusy,
+  onAcceptSuggestion,
+  onDeclineSuggestion,
 }: {
   document: TreeDocument;
   sharing: boolean;
@@ -40,6 +46,10 @@ export function EditorPanel({
   onAddPartner: (source: RelativeSource) => boolean;
   onAddChild: (source: RelativeSource, partnershipId?: string) => boolean;
   onDelete: (personId: string) => void;
+  suggestions: StoredSuggestion[];
+  suggestionBusy: boolean;
+  onAcceptSuggestion: (suggestionId: string) => void;
+  onDeclineSuggestion: (suggestionId: string) => void;
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -63,6 +73,13 @@ export function EditorPanel({
   return (
     <aside className="panel">
       <div className="panel-scroll">
+        <SuggestionList
+          document={document}
+          suggestions={suggestions}
+          busy={suggestionBusy}
+          onAccept={onAcceptSuggestion}
+          onDecline={onDeclineSuggestion}
+        />
         {sharing ? (
           <p className="share-banner">
             Shared view. Living people stay in the tree and appear as Living, without their private details.

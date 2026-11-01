@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { SuggestionForm } from "@/components/SuggestionForm";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
 import { loadShare } from "@/model/shareLink";
 import { displayName, lifeSpan, personMenuLabel, setFocus } from "@/model/tree";
@@ -40,7 +41,7 @@ export function SharedView({ token }: { token: string }) {
           <Link href="/">Family tree</Link>
         </p>
         <h1>{title}</h1>
-        <p className="share-banner">Shared view. This link can only be viewed.</p>
+        <p className="share-banner">Shared view. Suggest a change below. The owner accepts it before the tree changes.</p>
         <div className="toolbar-actions">
           <button type="button" aria-label="Zoom in" onClick={() => canvasRef.current?.zoomIn()}>
             +
@@ -81,6 +82,7 @@ export function SharedView({ token }: { token: string }) {
                 ))}
               </ul>
             </div>
+            <SuggestionForm token={token} document={document} />
           </div>
         </aside>
       ) : null}
