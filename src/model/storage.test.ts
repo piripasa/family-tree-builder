@@ -92,10 +92,10 @@ describe("storage", () => {
         throw new Error("quota");
       },
     });
-    expect(() => saveLibrary(loadLibrary())).not.toThrow();
+    expect(saveLibrary(loadLibrary())).toBe(false);
 
     vi.unstubAllGlobals();
     expect(loadLibrary().version).toBe(1);
-    expect(() => saveLibrary(loadLibrary())).not.toThrow();
+    expect(saveLibrary(loadLibrary())).toBe(true);
   });
 });

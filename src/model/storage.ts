@@ -16,12 +16,13 @@ export function loadLibrary(): TreeLibrary {
   }
 }
 
-export function saveLibrary(library: TreeLibrary): void {
-  if (typeof localStorage === "undefined") return;
+export function saveLibrary(library: TreeLibrary): boolean {
+  if (typeof localStorage === "undefined") return true;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
+    return true;
   } catch {
-    // The trees still live in memory if the browser refuses the write.
+    return false;
   }
 }
 

@@ -53,18 +53,18 @@ type DescNode = {
   hiddenDown: boolean;
 };
 
-export function layoutTree(doc: TreeDocument): TreeLayout | null {
+export function layoutTree(doc: TreeDocument, maxGenerations = MAX_GENERATIONS): TreeLayout | null {
   if (!doc.focusId || !doc.people.some((person) => person.id === doc.focusId)) return null;
 
   const seen = new Set<string>();
-  const root = buildDescendant(doc, doc.focusId, 0, seen);
+  const root = buildDescendant(doc, doc.focusId, 0, seen, maxGenerations);
   const cards: LayoutCard[] = [];
   const lines: LayoutLine[] = [];
   placeDescendant(doc, root, 0, 0, doc.focusId, cards, lines);
 
   const focus = cards.find((card) => card.personId === doc.focusId);
   if (focus) {
-    placeAncestors(doc, doc.focusId, focus.x + CARD_WIDTH / 2, focus.y, 0, cards, lines);
+    placeAncestors(doc, doc.focusId, focus.x + CARD_WIDTH / 2, focus.y, 0, cards, lines, maxGenerations);
   }
 
   if (cards.length === 0) return null;
@@ -100,12 +100,13 @@ function buildDescendant(
   personId: string,
   depth: number,
   seen: Set<string>,
+  maxGenerations: number,
 ): DescNode {
   seen.add(personId);
   const hasChildren = partnershipsAsPartner(doc, personId).some(
     (partnership) => partnership.childIds.length > 0,
   );
-  if (depth >= MAX_GENERATIONS) {
+  if (depth >= maxGenerations) {
     return {
       personId,
       personX: 0,
@@ -121,10 +122,10 @@ function buildDescendant(
     const partnerId = partnership.partnerIds.find((id) => id !== personId) ?? null;
     if (partnerId) seen.add(partnerId);
     const nodes: DescNode[] = [];
-    if (depth + 1 <= MAX_GENERATIONS) {
+    if (depth + 1 <= maxGenerations) {
       for (const childId of partnership.childIds) {
         if (seen.has(childId)) continue;
-        nodes.push(buildDescendant(doc, childId, depth + 1, seen));
+        nodes.push(buildDescendant(doc, childId, depth + 1, seen, maxGenerations));
       }
     }
     builtGroups.push({ partnerId, nodes });
@@ -186,8 +187,9 @@ function placeAncestors(
   depth: number,
   cards: LayoutCard[],
   lines: LayoutLine[],
+  maxGenerations: number,
 ): void {
-  if (depth >= MAX_GENERATIONS) return;
+  if (depth >= maxGenerations) return;
   const partnership = parentPartnershipOf(doc, personId);
   if (!partnership) return;
 
@@ -198,7 +200,7 @@ function placeAncestors(
 
   const cardXs = parentCardXs(
     childCenterX,
-    parentIds.map((id) => ancestorRowWidth(doc, id, depth + 1)),
+    parentIds.map((id) => ancestorRowWidth(doc, id, depth + 1, maxGenerations)),
   );
   const parentTop = childTop - LEVEL_GAP;
   const placed: { x: number; y: number }[] = [];
@@ -212,22 +214,22 @@ function placeAncestors(
         cardX,
         parentTop,
         personId,
-        depth + 1 >= MAX_GENERATIONS && hasParents(doc, id),
+        depth + 1 >= maxGenerations && hasParents(doc, id),
         false,
       ),
     );
     placed.push({ x: cardX, y: parentTop });
-    placeAncestors(doc, id, cardX + CARD_WIDTH / 2, parentTop, depth + 1, cards, lines);
+    placeAncestors(doc, id, cardX + CARD_WIDTH / 2, parentTop, depth + 1, cards, lines, maxGenerations);
   });
 
   addParentBus(placed, childCenterX, childTop, lines);
 }
 
-function ancestorRowWidth(doc: TreeDocument, personId: string, depth: number): number {
-  if (depth >= MAX_GENERATIONS) return 0;
+function ancestorRowWidth(doc: TreeDocument, personId: string, depth: number, maxGenerations: number): number {
+  if (depth >= maxGenerations) return 0;
   const partnership = parentPartnershipOf(doc, personId);
   if (!partnership || partnership.partnerIds.length === 0) return 0;
-  const above = partnership.partnerIds.map((id) => ancestorRowWidth(doc, id, depth + 1));
+  const above = partnership.partnerIds.map((id) => ancestorRowWidth(doc, id, depth + 1, maxGenerations));
   return rowSpan(above);
 }
 

@@ -11,6 +11,7 @@ import {
   eligiblePeople,
   isAlive,
   lifeSpan,
+  personMenuLabel,
   parentsOf,
   partnersOf,
   partnershipLabel,
@@ -42,19 +43,23 @@ describe("people", () => {
     const doc = must(started);
     expect(doc.focusId).toBe(idOf(started));
     expect(named(doc, "Ada").familyName).toBe("Lovelace");
+    expect(named(doc, "Ada").living).toBe(true);
     expect(displayName({ id: "x", givenName: " ", familyName: " " })).toBe("Unnamed");
   });
 
-  it("treats a person as alive until a death is recorded", () => {
+  it("treats a person as alive only when they are marked alive", () => {
     const person = { id: "a", givenName: "Ada", familyName: "Lovelace" };
-    expect(isAlive(person)).toBe(true);
+    expect(isAlive(person)).toBe(false);
+    expect(isAlive({ ...person, living: true })).toBe(true);
     expect(isAlive({ ...person, living: false })).toBe(false);
-    expect(isAlive({ ...person, deathDate: "1852-11-27" })).toBe(false);
+    expect(isAlive({ ...person, living: true, deathDate: "1852-11-27" })).toBe(false);
     expect(lifeSpan(person)).toBe("");
     expect(lifeSpan({ ...person, birthDate: "1815-12-10" })).toBe("b. 1815");
     expect(lifeSpan({ ...person, deathDate: "1852-11-27" })).toBe("d. 1852");
     expect(lifeSpan({ ...person, birthDate: "1815-12-10", deathDate: "1852-11-27" })).toBe("1815–1852");
     expect(lifeSpan({ ...person, birthDate: "December" })).toBe("");
+    expect(personMenuLabel(person)).toBe("Ada Lovelace");
+    expect(personMenuLabel({ ...person, birthDate: "1815-12-10" })).toBe("Ada Lovelace (b. 1815)");
   });
 
   it("clears death details when someone is marked alive", () => {
@@ -80,7 +85,7 @@ describe("people", () => {
     expect(isAlive(named(alive, "Ada"))).toBe(true);
     expect(named(alive, "Ada").deathDate).toBeUndefined();
     expect(named(alive, "Ada").deathPlace).toBeUndefined();
-    expect(named(alive, "Ada").living).toBeUndefined();
+    expect(named(alive, "Ada").living).toBe(true);
 
     const unmarked = updatePerson(alive, id, { living: false });
     expect(named(unmarked, "Ada").living).toBe(false);

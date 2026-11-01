@@ -15,6 +15,13 @@ describe("sharedTree", () => {
           photo: "data:image/jpeg;base64,abc",
           birthDate: "1815-12-10",
           note: "Mathematician",
+          living: true,
+        },
+        {
+          id: "byron",
+          givenName: "George",
+          familyName: "Byron",
+          birthDate: "1788-01-22",
         },
         {
           id: "ann",
@@ -29,6 +36,7 @@ describe("sharedTree", () => {
     const shared = sharedTree(document);
     expect(shared.people[0]).toEqual({ id: "ada", givenName: "Living", familyName: "" });
     expect(shared.people[1]).toEqual(document.people[1]);
+    expect(shared.people[2]).toEqual(document.people[2]);
     expect(shared.partnerships).toEqual(document.partnerships);
     expect(shared.focusId).toBe("ada");
   });

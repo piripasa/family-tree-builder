@@ -8,6 +8,7 @@ import {
   eligiblePeople,
   isAlive,
   parentsOf,
+  personMenuLabel,
   partnershipLabel,
   partnershipsAsPartner,
   partnersOf,
@@ -91,7 +92,7 @@ export function EditorPanel({
           />
           Alive
         </label>
-        <p className="hint">A shared file keeps an alive person in the tree and leaves out their name, photo, dates, places, and note.</p>
+        <p className="hint">A shared file leaves out the name, photo, dates, places, and note of anyone marked alive. A person with no mark keeps their details.</p>
 
         <div className="photo-row">
           {person.photo ? (
@@ -239,7 +240,7 @@ export function EditorPanel({
                   aria-current={item.id === person.id ? "true" : undefined}
                   onClick={() => onFocus(item.id)}
                 >
-                  {displayName(item)}
+                  {personMenuLabel(item)}
                 </button>
               </li>
             ))}
@@ -256,7 +257,7 @@ function RelationList({
   onFocus,
 }: {
   label: string;
-  people: { id: string; givenName: string; familyName: string }[];
+  people: Person[];
   onFocus: (personId: string) => void;
 }) {
   return (
@@ -267,7 +268,7 @@ function RelationList({
           ? "None yet"
           : people.map((person) => (
               <button key={person.id} type="button" className="text-link" onClick={() => onFocus(person.id)}>
-                {displayName(person)}
+                {personMenuLabel(person)}
               </button>
             ))}
       </dd>
@@ -367,7 +368,7 @@ function RelativeForm({
               <select value={existingId} onChange={(event) => setExistingId(event.target.value)}>
                 {candidates.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
-                    {displayName(candidate)}
+                    {personMenuLabel(candidate)}
                   </option>
                 ))}
               </select>

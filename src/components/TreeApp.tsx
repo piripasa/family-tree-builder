@@ -28,6 +28,8 @@ import {
 } from "@/model/tree";
 import type { RelativeSource, TreeDocument, TreeLibrary, TreeResult } from "@/model/types";
 
+const SAVE_FAILED = "This tree could not be saved in this browser. Export a file so you do not lose it.";
+
 export function TreeApp() {
   const [library, setLibrary] = useState<TreeLibrary | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -42,7 +44,11 @@ export function TreeApp() {
 
   useEffect(() => {
     if (!library) return;
-    saveLibrary(library);
+    const saved = saveLibrary(library);
+    setMessage((current) => {
+      if (!saved) return SAVE_FAILED;
+      return current === SAVE_FAILED ? null : current;
+    });
   }, [library]);
 
   if (!library) {

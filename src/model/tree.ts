@@ -16,8 +16,13 @@ export function displayName(person: Person): string {
 }
 
 export function isAlive(person: Person): boolean {
-  if (person.living === false || person.deathDate) return false;
-  return true;
+  return person.living === true && !person.deathDate;
+}
+
+export function personMenuLabel(person: Person): string {
+  const name = displayName(person);
+  const span = lifeSpan(person);
+  return span ? `${name} (${span})` : name;
 }
 
 export function lifeSpan(person: Person): string {
@@ -88,7 +93,7 @@ export function partnershipLabel(
   if (others.length === 0) return "Only this parent";
   const names = others.map((id) => {
     const person = getPerson(doc, id);
-    return person ? displayName(person) : "Unknown";
+    return person ? personMenuLabel(person) : "Unknown";
   });
   return `With ${names.join(" and ")}`;
 }
@@ -364,7 +369,7 @@ function realizePerson(doc: TreeDocument, source: RelativeSource): TreeResult {
     const givenName = source.givenName.trim();
     const familyName = source.familyName.trim();
     if (!givenName) return fail("Enter a given name.");
-    const person: Person = { id: crypto.randomUUID(), givenName, familyName };
+    const person: Person = { id: crypto.randomUUID(), givenName, familyName, living: true };
     return {
       ok: true,
       personId: person.id,
@@ -390,12 +395,13 @@ function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): P
   if (patch.living === true) {
     delete next.deathDate;
     delete next.deathPlace;
+    next.living = true;
   } else if (patch.living === false) {
     next.living = false;
   } else if (typeof patch.deathDate === "string" && patch.deathDate.trim() !== "") {
     next.living = false;
   }
-  if (next.living !== false) delete next.living;
+  if (next.living !== true && next.living !== false) delete next.living;
   for (const key of ["birthDate", "deathDate", "birthPlace", "deathPlace", "note"] as const) {
     const value = next[key]?.trim();
     if (value) next[key] = value;

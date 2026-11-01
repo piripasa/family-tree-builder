@@ -41,7 +41,7 @@ async function rasterizeTree(tree: TreeDocument, title: string): Promise<HTMLCan
 }
 
 function treeSvg(tree: TreeDocument, title: string): Picture | null {
-  const layout = layoutTree(tree);
+  const layout = layoutTree(tree, Number.POSITIVE_INFINITY);
   if (!layout) return null;
   const titleBand = 44;
   const extra = 16;
@@ -105,7 +105,7 @@ type Picture = {
 };
 
 async function drawPhotos(context: CanvasRenderingContext2D, tree: TreeDocument, picture: Picture): Promise<void> {
-  const layout = layoutTree(tree);
+  const layout = layoutTree(tree, Number.POSITIVE_INFINITY);
   if (!layout) return;
   const scaleX = picture.width / picture.viewWidth;
   const scaleY = picture.height / picture.viewHeight;

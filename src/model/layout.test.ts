@@ -72,6 +72,13 @@ describe("layoutTree", () => {
     const descendants = layoutTree(setFocus(down.document, down.document.people[0].id));
     expect(descendants?.cards.some((card) => card.hiddenDown)).toBe(true);
     expect(descendants && descendants.cards.length).toBeLessThan(7);
+
+    const fullAncestors = layoutTree(step.document, Number.POSITIVE_INFINITY);
+    const fullDescendants = layoutTree(setFocus(down.document, down.document.people[0].id), Number.POSITIVE_INFINITY);
+    expect(fullAncestors?.cards).toHaveLength(7);
+    expect(fullAncestors?.cards.some((card) => card.hiddenUp)).toBe(false);
+    expect(fullDescendants?.cards).toHaveLength(7);
+    expect(fullDescendants?.cards.some((card) => card.hiddenDown)).toBe(false);
   });
 
   it("keeps a second partner beside the couple", () => {
