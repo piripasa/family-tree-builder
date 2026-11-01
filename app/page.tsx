@@ -24,7 +24,7 @@ const features = [
   },
   {
     title: "One link, view only",
-    text: "A signed-in tree can have a view-only link. Turn that link off, or replace it so the old address stops working.",
+    text: "A signed-in tree can have a view-only link. Turn that link off, or replace it so the old address stops working. Anyone who opens it can suggest a person, a date, or a correction. You accept it before the tree changes.",
   },
 ];
 
@@ -71,6 +71,10 @@ const questions = [
   {
     question: "Can I stop a share link?",
     answer: "Yes. Turn the link off and the old address no longer opens the tree. Replace it when you want a new address and the previous one to stop working.",
+  },
+  {
+    question: "Can someone suggest a change?",
+    answer: "Yes, from the share link. They can suggest a person, a date, or a correction. Nothing changes until you accept it. Living people's private details stay off that page.",
   },
   {
     question: "Can the same person be their own ancestor?",

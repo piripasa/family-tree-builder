@@ -82,6 +82,14 @@ async function migrate(): Promise<void> {
       UNIQUE (owner_id, tree_id),
       FOREIGN KEY (owner_id, tree_id) REFERENCES trees (owner_id, id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS suggestions (
+      id text PRIMARY KEY,
+      owner_id text NOT NULL,
+      tree_id text NOT NULL,
+      payload jsonb NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      FOREIGN KEY (owner_id, tree_id) REFERENCES trees (owner_id, id) ON DELETE CASCADE
+    );
   `);
 }
 

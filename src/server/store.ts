@@ -1,6 +1,14 @@
 import { ACCOUNT_TREE_LIMIT, createLibrary } from "@/model/library";
 import { parseTreeDocument } from "@/model/io";
 import { sharedTree } from "@/model/share";
+import {
+  applySuggestion,
+  parseSuggestion,
+  readSuggestion,
+  SUGGESTION_LIMIT,
+  SuggestionError,
+  type StoredSuggestion,
+} from "@/model/suggestion";
 import type { SavedTree, TreeDocument, TreeLibrary } from "@/model/types";
 import { withDatabase, withTransaction, type Queryable } from "./db";
 import { newSessionToken } from "./tokens";
@@ -202,6 +210,98 @@ export async function loadSharedByToken(token: string): Promise<{ title: string;
     const parsed = parseTreeDocument(row.document);
     if (!parsed.ok) return null;
     return { title: row.title, document: sharedTree(parsed.document) };
+  });
+}
+
+export async function addSuggestion(token: string, input: unknown): Promise<string> {
+  return withTransaction(async (db) => {
+    const found = await db.query<{ owner_id: string; tree_id: string; document: unknown }>(
+      `SELECT shares.owner_id, shares.tree_id, trees.document
+       FROM shares
+       JOIN trees ON trees.owner_id = shares.owner_id AND trees.id = shares.tree_id
+       WHERE shares.token = $1
+       FOR UPDATE OF trees`,
+      [token],
+    );
+    const row = found.rows[0];
+    if (!row) throw new AccountMissing("That share link could not be found.");
+    const parsed = parseTreeDocument(row.document);
+    if (!parsed.ok) throw new SuggestionError("That share link could not be found.");
+    const count = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM suggestions WHERE owner_id = $1 AND tree_id = $2",
+      [row.owner_id, row.tree_id],
+    );
+    if (Number(count.rows[0]?.count ?? 0) >= SUGGESTION_LIMIT) {
+      throw new AccountConflict("This tree already has 30 suggestions waiting.");
+    }
+    const suggestion = readSuggestion(input, parsed.document);
+    if (!suggestion.ok) throw new SuggestionError(suggestion.error);
+    const preview = applySuggestion(parsed.document, suggestion.suggestion);
+    if (!preview.ok) throw new SuggestionError(preview.error);
+    const id = crypto.randomUUID();
+    await db.query("INSERT INTO suggestions (id, owner_id, tree_id, payload) VALUES ($1, $2, $3, $4::jsonb)", [
+      id,
+      row.owner_id,
+      row.tree_id,
+      JSON.stringify(suggestion.suggestion),
+    ]);
+    return id;
+  });
+}
+
+export async function listSuggestions(userId: string, treeId: string): Promise<StoredSuggestion[]> {
+  return withDatabase(async (db) => {
+    const owned = await db.query("SELECT 1 FROM trees WHERE owner_id = $1 AND id = $2", [userId, treeId]);
+    if (owned.rowCount !== 1) throw new AccountMissing("That tree is not in this account.");
+    const result = await db.query<{ id: string; payload: unknown }>(
+      "SELECT id, payload FROM suggestions WHERE owner_id = $1 AND tree_id = $2 ORDER BY created_at, id",
+      [userId, treeId],
+    );
+    const suggestions: StoredSuggestion[] = [];
+    for (const row of result.rows) {
+      const parsed = parseSuggestion(row.payload);
+      if (parsed.ok) suggestions.push({ ...parsed.suggestion, id: row.id });
+    }
+    return suggestions;
+  });
+}
+
+export async function acceptSuggestion(userId: string, treeId: string, suggestionId: string): Promise<TreeDocument> {
+  return withTransaction(async (db) => {
+    const tree = await db.query<{ document: unknown }>(
+      "SELECT document FROM trees WHERE owner_id = $1 AND id = $2 FOR UPDATE",
+      [userId, treeId],
+    );
+    if (tree.rowCount !== 1 || !tree.rows[0]) throw new AccountMissing("That tree is not in this account.");
+    const waiting = await db.query<{ payload: unknown }>(
+      "SELECT payload FROM suggestions WHERE id = $1 AND owner_id = $2 AND tree_id = $3 FOR UPDATE",
+      [suggestionId, userId, treeId],
+    );
+    if (waiting.rowCount !== 1 || !waiting.rows[0]) throw new AccountMissing("That suggestion is no longer waiting.");
+    const parsed = parseTreeDocument(tree.rows[0].document);
+    if (!parsed.ok) throw new SuggestionError("That tree is unreadable.");
+    const suggestion = parseSuggestion(waiting.rows[0].payload);
+    if (!suggestion.ok) throw new SuggestionError(suggestion.error);
+    const applied = applySuggestion(parsed.document, suggestion.suggestion);
+    if (!applied.ok) throw new SuggestionError(applied.error);
+    await db.query("UPDATE trees SET document = $3::jsonb WHERE owner_id = $1 AND id = $2", [
+      userId,
+      treeId,
+      JSON.stringify(applied.document),
+    ]);
+    await db.query("DELETE FROM suggestions WHERE id = $1", [suggestionId]);
+    return applied.document;
+  });
+}
+
+export async function declineSuggestion(userId: string, treeId: string, suggestionId: string): Promise<void> {
+  return withDatabase(async (db) => {
+    const result = await db.query("DELETE FROM suggestions WHERE id = $1 AND owner_id = $2 AND tree_id = $3", [
+      suggestionId,
+      userId,
+      treeId,
+    ]);
+    if (result.rowCount !== 1) throw new AccountMissing("That suggestion is no longer waiting.");
   });
 }
 
