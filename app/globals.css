@@ -179,6 +179,80 @@ h2,
   font-size: 0.92rem;
 }
 
+.toolbar-notice {
+  flex: 1 0 100%;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.toolbar-notice a {
+  color: var(--forest);
+  margin-left: 0.35rem;
+  word-break: break-all;
+}
+
+.shared-details {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--ink);
+}
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.account input {
+  border: 1px solid var(--edge);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  width: 11rem;
+}
+
+.account-email {
+  font-size: 0.92rem;
+  color: var(--muted);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 5;
+  min-width: 9.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.menu-panel button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.menu-panel button:hover,
+.menu-panel button:focus-visible {
+  background: var(--paper-deep);
+}
+
 .file-button {
   position: relative;
   overflow: hidden;
@@ -288,6 +362,18 @@ button:focus-visible,
   gap: 0.35rem 0.7rem;
 }
 
+.marriage {
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  margin: 0.35rem 0 0.7rem;
+  padding: 0.55rem 0.75rem 0.75rem;
+}
+
+.marriage legend {
+  padding: 0 0.3rem;
+  color: var(--muted);
+}
+
 .text-link,
 .person-link {
   border: 0;
@@ -388,6 +474,13 @@ button:focus-visible,
   stroke-width: 1.5;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+.tree-label {
+  fill: var(--muted);
+  font-size: 12px;
+  text-anchor: middle;
+  font-family: Palatino, Georgia, serif;
 }
 
 .person-card {

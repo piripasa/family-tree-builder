@@ -78,10 +78,11 @@ function treeSvg(tree: TreeDocument, title: string): Picture | null {
     return `<g transform="translate(${card.x} ${card.y})"><rect width="${card.width}" height="${card.height}" rx="12" fill="#fffdf8" ${stroke}/>${photo}<text x="${textX}" y="${span ? 28 : family ? 36 : 50}" fill="#1e1a14" font-size="16" font-family="Palatino, Georgia, serif">${xml(truncate(given, person.photo ? 13 : 18))}</text>${familyText}${spanText}${hiddenUp}${hiddenDown}</g>`;
   });
   const lines = layout.lines
-    .map(
-      (line) =>
-        `<path d="${line.d}" fill="none" stroke="#8d8374" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`,
-    )
+    .map((line) => {
+      const path = `<path d="${line.d}" fill="none" stroke="#8d8374" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (line.label == null || line.labelX == null || line.labelY == null) return path;
+      return `${path}<text x="${line.labelX}" y="${line.labelY}" fill="#6f675c" font-size="12" text-anchor="middle" font-family="Palatino, Georgia, serif">${xml(line.label)}</text>`;
+    })
     .join("");
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${pixelWidth}" height="${pixelHeight}" viewBox="${x} ${y} ${width} ${height}">`,

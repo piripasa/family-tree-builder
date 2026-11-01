@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { EditorPanel } from "@/components/EditorPanel";
 import { Toolbar } from "@/components/Toolbar";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
-import { parseTreeDocument, downloadTree } from "@/model/io";
+import { applyLibraryChanges, fetchSession, loadAccountLibrary, signIn, signOut, signUp } from "@/model/account";
+import { downloadGedcom, parseGedcom } from "@/model/gedcom";
+import { downloadTree, parseTreeDocument } from "@/model/io";
 import {
+  ACCOUNT_TREE_LIMIT,
+  LOCAL_TREE_LIMIT,
   activeTree,
   addTree,
   deleteActiveTree,
@@ -15,7 +19,9 @@ import {
 } from "@/model/library";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
+import { createShareLink } from "@/model/shareLink";
 import { loadLibrary, saveLibrary } from "@/model/storage";
+import { libraryChanges } from "@/model/sync";
 import {
   addChild,
   addFirstPerson,
@@ -25,33 +31,85 @@ import {
   displayName,
   setFocus,
   updatePerson,
+  updatePartnership,
 } from "@/model/tree";
 import type { RelativeSource, TreeDocument, TreeLibrary, TreeResult } from "@/model/types";
 
 const SAVE_FAILED = "This tree could not be saved in this browser. Export a file so you do not lose it.";
+const ACCOUNT_SAVE_FAILED = "This tree could not be saved to your account. Export a file so you do not lose it.";
 
 export function TreeApp() {
   const [library, setLibrary] = useState<TreeLibrary | null>(null);
+  const [source, setSource] = useState<"local" | "account" | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<{ url: string; copied: boolean } | null>(null);
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const canvasRef = useRef<TreeCanvasHandle>(null);
+  const remoteRef = useRef<TreeLibrary | null>(null);
+  const queueRef = useRef(Promise.resolve());
 
   useEffect(() => {
-    setLibrary(loadLibrary());
+    let cancelled = false;
+    void (async () => {
+      try {
+        const session = await fetchSession();
+        if (cancelled) return;
+        if (!session) {
+          setSource("local");
+          setLibrary(loadLibrary());
+          return;
+        }
+        const remote = await loadAccountLibrary();
+        if (cancelled) return;
+        remoteRef.current = remote;
+        setEmail(session.email);
+        setSource("account");
+        setLibrary(remote);
+      } catch (error) {
+        if (cancelled) return;
+        setSource("local");
+        setLibrary(loadLibrary());
+        setMessage(error instanceof Error ? error.message : "Your account could not be loaded. This browser copy is open.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!library) return;
-    const saved = saveLibrary(library);
-    setMessage((current) => {
-      if (!saved) return SAVE_FAILED;
-      return current === SAVE_FAILED ? null : current;
-    });
-  }, [library]);
+    if (!library || !source) return;
+    if (source === "local") {
+      const saved = saveLibrary(library);
+      setMessage((current) => {
+        if (!saved) return SAVE_FAILED;
+        return current === SAVE_FAILED ? null : current;
+      });
+      return;
+    }
+    const snapshot = library;
+    const handle = window.setTimeout(() => {
+      queueRef.current = queueRef.current
+        .then(async () => {
+          const before = remoteRef.current;
+          if (!before) return;
+          const changes = libraryChanges(before, snapshot);
+          if (changes.length === 0) return;
+          await applyLibraryChanges(changes);
+          remoteRef.current = snapshot;
+          setMessage((current) => (current === ACCOUNT_SAVE_FAILED ? null : current));
+        })
+        .catch(() => {
+          setMessage(ACCOUNT_SAVE_FAILED);
+        });
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [library, source]);
 
-  if (!library) {
+  if (!library || !source) {
     return <main className="app loading">Loading family tree…</main>;
   }
 
@@ -84,11 +142,17 @@ export function TreeApp() {
   }
 
   function onNew() {
+    const limit = source === "account" ? ACCOUNT_TREE_LIMIT : LOCAL_TREE_LIMIT;
+    if (shelf.trees.length >= limit) {
+      setMessage(source === "account" ? "An account can keep 5 trees." : "Sign in to keep more than one tree.");
+      return;
+    }
     setMessage(null);
+    setShareNotice(null);
     setGivenName("");
     setFamilyName("");
     setSharing(false);
-    setLibrary(addTree(shelf));
+    setLibrary(addTree(shelf, limit));
   }
 
   function onDeleteTree() {
@@ -101,10 +165,11 @@ export function TreeApp() {
       return;
     }
     const question = only
-      ? `Clear ${title}? The people in it will be removed from this browser.`
-      : `Delete ${title}? It will be removed from this browser.`;
+      ? `Clear ${title}? The people in it will be removed from ${source === "account" ? "your account" : "this browser"}.`
+      : `Delete ${title}? It will be removed from ${source === "account" ? "your account" : "this browser"}.`;
     if (!window.confirm(question)) return;
     setMessage(null);
+    setShareNotice(null);
     setGivenName("");
     setFamilyName("");
     setSharing(false);
@@ -112,11 +177,20 @@ export function TreeApp() {
   }
 
   async function onImport(file: File) {
+    const text = await file.text();
+    const name = file.name.toLowerCase();
     let parsed: ReturnType<typeof parseTreeDocument>;
-    try {
-      parsed = parseTreeDocument(JSON.parse(await file.text()));
-    } catch {
-      setMessage("That file is not valid JSON.");
+    if (name.endsWith(".ged") || name.endsWith(".gedcom")) {
+      parsed = parseGedcom(text);
+    } else if (name.endsWith(".json") || text.trimStart().startsWith("{")) {
+      try {
+        parsed = parseTreeDocument(JSON.parse(text));
+      } catch {
+        setMessage("That file is not valid JSON.");
+        return;
+      }
+    } else {
+      setMessage("Import a JSON or GEDCOM file.");
       return;
     }
     if (!parsed.ok) {
@@ -141,6 +215,90 @@ export function TreeApp() {
     updateDocument(next);
   }
 
+  function openAccount(session: { email: string; library: TreeLibrary }) {
+    remoteRef.current = session.library;
+    setEmail(session.email);
+    setSharing(false);
+    setMessage(null);
+    setGivenName("");
+    setFamilyName("");
+    setSource("account");
+    setLibrary(session.library);
+  }
+
+  async function onSignUp(address: string, password: string): Promise<string | null> {
+    const result = await signUp(address, password, shelf);
+    if (!result.ok) {
+      setMessage(result.error);
+      return result.error;
+    }
+    openAccount(result.session);
+    return null;
+  }
+
+  async function onSignIn(address: string, password: string): Promise<string | null> {
+    const result = await signIn(address, password);
+    if (!result.ok) {
+      setMessage(result.error);
+      return result.error;
+    }
+    openAccount(result.session);
+    return null;
+  }
+
+  async function onSignOut() {
+    saveLibrary(shelf);
+    const result = await signOut();
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+    remoteRef.current = null;
+    setEmail(null);
+    setSharing(false);
+    setMessage(null);
+    setShareNotice(null);
+    setSource("local");
+  }
+
+  async function onShare() {
+    setShareNotice(null);
+    if (source !== "account") {
+      setMessage("Sign in to share a link.");
+      return;
+    }
+    setMessage(null);
+    const snapshot = shelf;
+    const treeId = activeTree(snapshot).id;
+    const pending = queueRef.current.then(async () => {
+      const before = remoteRef.current;
+      if (!before) throw new Error("Sign in to share a link.");
+      const changes = libraryChanges(before, snapshot);
+      if (changes.length > 0) {
+        await applyLibraryChanges(changes);
+        remoteRef.current = snapshot;
+      }
+      return createShareLink(treeId);
+    });
+    queueRef.current = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      const url = await pending;
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+      setShareNotice({ url, copied });
+    } catch (error) {
+      setMessage(error instanceof Error && error.message ? error.message : "The share link could not be created.");
+    }
+  }
+
   function addRelative(source: RelativeSource, run: (source: RelativeSource) => TreeResult): boolean {
     return apply(run(source));
   }
@@ -158,6 +316,7 @@ export function TreeApp() {
         onSelectTree={(id) => {
           setSharing(false);
           setMessage(null);
+          setShareNotice(null);
           setGivenName("");
           setFamilyName("");
           setLibrary(selectTree(shelf, id));
@@ -167,6 +326,7 @@ export function TreeApp() {
         onDeleteTree={onDeleteTree}
         onImport={onImport}
         onExport={() => downloadTree(document)}
+        onExportGedcom={() => downloadGedcom(document, current.title)}
         onExportImage={() => {
           void downloadTreeImage(shown, current.title).then(
             () => setMessage(null),
@@ -179,11 +339,18 @@ export function TreeApp() {
             () => setMessage("The PDF could not be created."),
           );
         }}
-        onShare={() => downloadTree(sharedTree(document), "family-tree-shared.json")}
+        onShare={() => {
+          void onShare();
+        }}
+        shareNotice={shareNotice}
         onToggleShare={() => setSharing((value) => !value)}
         onZoomIn={() => canvasRef.current?.zoomIn()}
         onZoomOut={() => canvasRef.current?.zoomOut()}
         onFit={() => canvasRef.current?.fit()}
+        accountEmail={email}
+        onSignIn={onSignIn}
+        onSignUp={onSignUp}
+        onSignOut={onSignOut}
       />
       {hasPeople ? (
         <EditorPanel
@@ -191,6 +358,9 @@ export function TreeApp() {
           sharing={sharing}
           onFocus={(personId) => updateDocument(setFocus(document, personId))}
           onUpdate={(personId, patch) => updateDocument(updatePerson(document, personId, patch))}
+          onUpdatePartnership={(partnershipId, patch) =>
+            updateDocument(updatePartnership(document, partnershipId, patch))
+          }
           onAddParent={(source) => addRelative(source, (item) => addParent(document, document.focusId as string, item))}
           onAddPartner={(source) =>
             addRelative(source, (item) => addPartner(document, document.focusId as string, item))
@@ -210,7 +380,7 @@ export function TreeApp() {
       ) : (
         <section className="empty-state">
           <form onSubmit={onStart}>
-            <p className="eyebrow">A private tree in this browser</p>
+            <p className="eyebrow">{source === "account" ? "Saved in your account" : "A private tree in this browser"}</p>
             <h2>Start a family tree</h2>
             <p className="lede">
               Add one person, then attach parents, a partner, and children. Click anyone to follow the tree backward
