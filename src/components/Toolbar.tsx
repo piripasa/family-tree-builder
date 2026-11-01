@@ -17,6 +17,10 @@ export function Toolbar({
   onRenameTree,
   onNew,
   onDeleteTree,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onImport,
   onExport,
   onExportGedcom,
@@ -44,6 +48,10 @@ export function Toolbar({
   onRenameTree: (title: string) => void;
   onNew: () => void;
   onDeleteTree: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   onImport: (file: File) => void;
   onExport: () => void;
   onExportGedcom: () => void;
@@ -91,6 +99,12 @@ export function Toolbar({
         </button>
         <button type="button" onClick={onDeleteTree} disabled={!canDelete}>
           Delete tree
+        </button>
+        <button type="button" onClick={onUndo} disabled={!canUndo}>
+          Undo
+        </button>
+        <button type="button" onClick={onRedo} disabled={!canRedo}>
+          Redo
         </button>
         <label className="file-button">
           Import

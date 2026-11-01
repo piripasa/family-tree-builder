@@ -17,6 +17,7 @@ import {
   replaceActive,
   selectTree,
 } from "@/model/library";
+import { emptyHistory, pushHistory, redoHistory, undoHistory } from "@/model/history";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
 import { createShareLink } from "@/model/shareLink";
@@ -50,6 +51,11 @@ export function TreeApp() {
   const canvasRef = useRef<TreeCanvasHandle>(null);
   const remoteRef = useRef<TreeLibrary | null>(null);
   const queueRef = useRef(Promise.resolve());
+  const [history, setHistory] = useState(emptyHistory<TreeLibrary>());
+  const gestureRef = useRef<string | null>(null);
+  const gestureTimer = useRef(0);
+  const undoRef = useRef(() => {});
+  const redoRef = useRef(() => {});
 
   useEffect(() => {
     let cancelled = false;
@@ -109,6 +115,26 @@ export function TreeApp() {
     return () => window.clearTimeout(handle);
   }, [library, source]);
 
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "z") return;
+      event.preventDefault();
+      if (event.shiftKey) redoRef.current();
+      else undoRef.current();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (!library || !source) {
     return <main className="app loading">Loading family tree…</main>;
   }
@@ -118,6 +144,47 @@ export function TreeApp() {
   const document = current.document;
   const hasPeople = document.people.length > 0;
   const shown = sharing ? sharedTree(document) : document;
+
+  function resetHistory() {
+    gestureRef.current = null;
+    window.clearTimeout(gestureTimer.current);
+    setHistory(emptyHistory());
+  }
+
+  function remember(gesture: string) {
+    setHistory((current) => {
+      if (gestureRef.current === gesture) return current;
+      gestureRef.current = gesture;
+      window.clearTimeout(gestureTimer.current);
+      gestureTimer.current = window.setTimeout(() => {
+        gestureRef.current = null;
+      }, 700);
+      return pushHistory(current, shelf);
+    });
+  }
+
+  function onUndo() {
+    const step = undoHistory(history, shelf);
+    if (!step) return;
+    gestureRef.current = null;
+    window.clearTimeout(gestureTimer.current);
+    setHistory(step.history);
+    setMessage(null);
+    setLibrary(step.value);
+  }
+
+  function onRedo() {
+    const step = redoHistory(history, shelf);
+    if (!step) return;
+    gestureRef.current = null;
+    window.clearTimeout(gestureTimer.current);
+    setHistory(step.history);
+    setMessage(null);
+    setLibrary(step.value);
+  }
+
+  undoRef.current = onUndo;
+  redoRef.current = onRedo;
 
   function updateDocument(next: TreeDocument) {
     setLibrary(replaceActive(shelf, next));
@@ -129,6 +196,7 @@ export function TreeApp() {
       return false;
     }
     setMessage(null);
+    remember(`edit:${crypto.randomUUID()}`);
     updateDocument(result.document);
     return true;
   }
@@ -152,6 +220,7 @@ export function TreeApp() {
     setGivenName("");
     setFamilyName("");
     setSharing(false);
+    remember(`tree:${crypto.randomUUID()}`);
     setLibrary(addTree(shelf, limit));
   }
 
@@ -161,6 +230,7 @@ export function TreeApp() {
     if (!hasPeople) {
       if (only) return;
       setSharing(false);
+      remember(`tree:${crypto.randomUUID()}`);
       setLibrary(deleteActiveTree(shelf));
       return;
     }
@@ -173,6 +243,7 @@ export function TreeApp() {
     setGivenName("");
     setFamilyName("");
     setSharing(false);
+    remember(`tree:${crypto.randomUUID()}`);
     setLibrary(deleteActiveTree(shelf));
   }
 
@@ -200,6 +271,7 @@ export function TreeApp() {
     if (hasPeople && !window.confirm("Replace the current tree with this file?")) return;
     setMessage(null);
     setSharing(false);
+    remember(`import:${crypto.randomUUID()}`);
     updateDocument(parsed.document);
   }
 
@@ -212,6 +284,7 @@ export function TreeApp() {
     const next = deletePerson(document, personId);
     if (next.people.length === 0) setSharing(false);
     setMessage(null);
+    remember(`delete:${personId}:${crypto.randomUUID()}`);
     updateDocument(next);
   }
 
@@ -222,6 +295,7 @@ export function TreeApp() {
     setMessage(null);
     setGivenName("");
     setFamilyName("");
+    resetHistory();
     setSource("account");
     setLibrary(session.library);
   }
@@ -258,6 +332,7 @@ export function TreeApp() {
     setSharing(false);
     setMessage(null);
     setShareNotice(null);
+    resetHistory();
     setSource("local");
   }
 
@@ -319,11 +394,19 @@ export function TreeApp() {
           setShareNotice(null);
           setGivenName("");
           setFamilyName("");
+          if (id !== shelf.activeId) resetHistory();
           setLibrary(selectTree(shelf, id));
         }}
-        onRenameTree={(title) => setLibrary(renameActive(shelf, title))}
+        onRenameTree={(title) => {
+          remember("title");
+          setLibrary(renameActive(shelf, title));
+        }}
         onNew={onNew}
         onDeleteTree={onDeleteTree}
+        canUndo={history.past.length > 0}
+        canRedo={history.future.length > 0}
+        onUndo={onUndo}
+        onRedo={onRedo}
         onImport={onImport}
         onExport={() => downloadTree(document)}
         onExportGedcom={() => downloadGedcom(document, current.title)}
@@ -357,10 +440,14 @@ export function TreeApp() {
           document={document}
           sharing={sharing}
           onFocus={(personId) => updateDocument(setFocus(document, personId))}
-          onUpdate={(personId, patch) => updateDocument(updatePerson(document, personId, patch))}
-          onUpdatePartnership={(partnershipId, patch) =>
-            updateDocument(updatePartnership(document, partnershipId, patch))
-          }
+          onUpdate={(personId, patch) => {
+            remember(`person:${personId}:${Object.keys(patch).sort().join(",")}`);
+            updateDocument(updatePerson(document, personId, patch));
+          }}
+          onUpdatePartnership={(partnershipId, patch) => {
+            remember(`partnership:${partnershipId}:${Object.keys(patch).sort().join(",")}`);
+            updateDocument(updatePartnership(document, partnershipId, patch));
+          }}
           onAddParent={(source) => addRelative(source, (item) => addParent(document, document.focusId as string, item))}
           onAddPartner={(source) =>
             addRelative(source, (item) => addPartner(document, document.focusId as string, item))
