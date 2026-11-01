@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import type { SavedTree } from "@/model/types";
 
@@ -61,7 +62,9 @@ export function Toolbar({
 }) {
   return (
     <header className="toolbar">
-      <h1>Family tree</h1>
+      <h1>
+        <Link href="/">Family tree</Link>
+      </h1>
       <AccountMenu email={accountEmail} onSignIn={onSignIn} onSignUp={onSignUp} onSignOut={onSignOut} />
       <label className="tree-field">
         Tree

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
 import { loadShare } from "@/model/shareLink";
 import { displayName, lifeSpan, personMenuLabel, setFocus } from "@/model/tree";
@@ -35,6 +36,9 @@ export function SharedView({ token }: { token: string }) {
   return (
     <main className={document && document.people.length > 0 ? "app" : "app is-empty"}>
       <header className="toolbar">
+        <p className="home-return">
+          <Link href="/">Family tree</Link>
+        </p>
         <h1>{title}</h1>
         <p className="share-banner">Shared view. This link can only be viewed.</p>
         <div className="toolbar-actions">
