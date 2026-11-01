@@ -17,6 +17,7 @@ import {
   replaceActive,
   selectTree,
 } from "@/model/library";
+import { mergePeople } from "@/model/merge";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
 import { createShareLink } from "@/model/shareLink";
@@ -368,6 +369,7 @@ export function TreeApp() {
           onAddChild={(source, partnershipId) =>
             apply(addChild(document, document.focusId as string, source, partnershipId))
           }
+          onMerge={(otherId) => apply(mergePeople(document, document.focusId as string, otherId))}
           onDelete={onDelete}
         />
       ) : null}

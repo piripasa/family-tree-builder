@@ -416,6 +416,27 @@ button:focus-visible,
   padding-top: 0.35rem;
 }
 
+.merge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.merge h3 {
+  font-size: 0.95rem;
+}
+
+.merge-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.merge-actions button,
+.merge > button {
+  width: 100%;
+}
+
 .adder-toggle {
   width: 100%;
   text-align: left;
