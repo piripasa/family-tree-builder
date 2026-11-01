@@ -1,3 +1,4 @@
+import { AccountMenu } from "@/components/AccountMenu";
 import type { SavedTree } from "@/model/types";
 
 export function Toolbar({
@@ -21,6 +22,10 @@ export function Toolbar({
   onZoomIn,
   onZoomOut,
   onFit,
+  accountEmail,
+  onSignIn,
+  onSignUp,
+  onSignOut,
 }: {
   trees: SavedTree[];
   activeId: string;
@@ -42,10 +47,15 @@ export function Toolbar({
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFit: () => void;
+  accountEmail: string | null;
+  onSignIn: (email: string, password: string) => Promise<string | null>;
+  onSignUp: (email: string, password: string) => Promise<string | null>;
+  onSignOut: () => Promise<void>;
 }) {
   return (
     <header className="toolbar">
       <h1>Family tree</h1>
+      <AccountMenu email={accountEmail} onSignIn={onSignIn} onSignUp={onSignUp} onSignOut={onSignOut} />
       <label className="tree-field">
         Tree
         <select value={activeId} onChange={(event) => onSelectTree(event.target.value)}>

@@ -179,6 +179,30 @@ h2,
   font-size: 0.92rem;
 }
 
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.account input {
+  border: 1px solid var(--edge);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  width: 11rem;
+}
+
+.account-email {
+  font-size: 0.92rem;
+  color: var(--muted);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-button {
   position: relative;
   overflow: hidden;

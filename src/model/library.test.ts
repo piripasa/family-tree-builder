@@ -4,6 +4,7 @@ import {
   addTree,
   createLibrary,
   deleteActiveTree,
+  parseStoredLibrary,
   renameActive,
   replaceActive,
   selectTree,
@@ -58,5 +59,37 @@ describe("library", () => {
   it("uses the first tree when the active id is missing", () => {
     const library = createLibrary(filled);
     expect(activeTree({ ...library, activeId: "missing" }).document).toEqual(filled);
+  });
+
+  it("reads a stored library and rejects a broken one", () => {
+    const library = createLibrary(filled, "Lovelace side");
+    const stored = parseStoredLibrary(library);
+    if (!stored.ok) throw new Error(stored.error);
+    expect(stored.library.trees[0].title).toBe("Lovelace side");
+    expect(stored.library.trees[0].document).toEqual(filled);
+
+    const longTitle = parseStoredLibrary({ ...library, trees: [{ ...library.trees[0], title: "A".repeat(90) }] });
+    if (!longTitle.ok) throw new Error(longTitle.error);
+    expect(longTitle.library.trees[0].title).toHaveLength(80);
+
+    const fallback = parseStoredLibrary({ ...library, activeId: "missing" });
+    if (!fallback.ok) throw new Error(fallback.error);
+    expect(fallback.library.activeId).toBe(library.trees[0].id);
+
+    expect(parseStoredLibrary(null).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 2, trees: [] }).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [] }).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [null] }).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [{ id: "nope", title: "A", document: filled }] }).ok).toBe(false);
+    expect(
+      parseStoredLibrary({
+        version: 1,
+        trees: [library.trees[0], library.trees[0]],
+      }).ok,
+    ).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [{ ...library.trees[0], title: 4 }] }).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [{ ...library.trees[0], document: { version: 1 } }] }).ok).toBe(false);
+    expect(parseStoredLibrary(library, { chars: 5 }).ok).toBe(false);
+    expect(parseStoredLibrary({ version: 1, trees: [library.trees[0], library.trees[0]] }, { trees: 1 }).ok).toBe(false);
   });
 });
