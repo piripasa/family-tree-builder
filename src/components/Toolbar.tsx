@@ -22,6 +22,7 @@ export function Toolbar({
   onExportGedcom,
   onExportImage,
   onExportPdf,
+  onExportReport,
   onShare,
   shareNotice,
   onToggleShare,
@@ -49,6 +50,7 @@ export function Toolbar({
   onExportGedcom: () => void;
   onExportImage: () => void;
   onExportPdf: () => void;
+  onExportReport: () => void;
   onShare: () => void;
   shareNotice: { url: string; copied: boolean } | null;
   onToggleShare: () => void;
@@ -110,6 +112,7 @@ export function Toolbar({
           onExportGedcom={onExportGedcom}
           onExportImage={onExportImage}
           onExportPdf={onExportPdf}
+          onExportReport={onExportReport}
           onShare={onShare}
         />
         <button
@@ -153,6 +156,7 @@ function ExportMenu({
   onExportGedcom,
   onExportImage,
   onExportPdf,
+  onExportReport,
   onShare,
 }: {
   disabled: boolean;
@@ -160,6 +164,7 @@ function ExportMenu({
   onExportGedcom: () => void;
   onExportImage: () => void;
   onExportPdf: () => void;
+  onExportReport: () => void;
   onShare: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -170,6 +175,7 @@ function ExportMenu({
     { label: "GEDCOM", action: onExportGedcom },
     { label: "Image", action: onExportImage },
     { label: "PDF", action: onExportPdf },
+    { label: "Report", action: onExportReport },
     { label: "Share", action: onShare },
   ];
 

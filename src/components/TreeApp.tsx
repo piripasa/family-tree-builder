@@ -18,6 +18,7 @@ import {
   selectTree,
 } from "@/model/library";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
+import { downloadReportPdf } from "@/model/report";
 import { sharedTree } from "@/model/share";
 import { createShareLink } from "@/model/shareLink";
 import { loadLibrary, saveLibrary } from "@/model/storage";
@@ -338,6 +339,14 @@ export function TreeApp() {
             () => setMessage(null),
             () => setMessage("The PDF could not be created."),
           );
+        }}
+        onExportReport={() => {
+          try {
+            downloadReportPdf(document, current.title);
+            setMessage(null);
+          } catch {
+            setMessage("The report could not be created.");
+          }
         }}
         onShare={() => {
           void onShare();
