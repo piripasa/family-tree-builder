@@ -1,12 +1,37 @@
 import { parseTreeDocument } from "./io";
 import type { TreeDocument } from "./types";
 
-export async function createShareLink(treeId: string): Promise<string> {
-  const response = await fetch(`/api/trees/${treeId}/share`, { method: "POST" });
+export async function readShareLink(treeId: string): Promise<string | null> {
+  const response = await fetch(`/api/trees/${treeId}/share`);
   const body = await readBody(response);
-  if (!response.ok || typeof body?.url !== "string") {
-    throw new Error(errorMessage(body, "The share link could not be created."));
-  }
+  if (!response.ok) throw new Error(errorMessage(body, "The share link could not be loaded."));
+  if (body?.url == null) return null;
+  if (typeof body.url !== "string") throw new Error("The share link could not be loaded.");
+  return body.url;
+}
+
+export async function createShareLink(treeId: string): Promise<string> {
+  return postShareLink(treeId, false, "The share link could not be created.");
+}
+
+export async function replaceShareLink(treeId: string): Promise<string> {
+  return postShareLink(treeId, true, "The share link could not be replaced.");
+}
+
+export async function revokeShareLink(treeId: string): Promise<void> {
+  const response = await fetch(`/api/trees/${treeId}/share`, { method: "DELETE" });
+  const body = await readBody(response);
+  if (!response.ok) throw new Error(errorMessage(body, "The share link could not be turned off."));
+}
+
+async function postShareLink(treeId: string, replace: boolean, failure: string): Promise<string> {
+  const response = await fetch(`/api/trees/${treeId}/share`, {
+    method: "POST",
+    headers: replace ? { "content-type": "application/json" } : undefined,
+    body: replace ? JSON.stringify({ replace: true }) : undefined,
+  });
+  const body = await readBody(response);
+  if (!response.ok || typeof body?.url !== "string") throw new Error(errorMessage(body, failure));
   return body.url;
 }
 

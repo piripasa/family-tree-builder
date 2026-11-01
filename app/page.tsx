@@ -24,7 +24,7 @@ const features = [
   },
   {
     title: "One link, view only",
-    text: "A signed-in tree gets a stable link. Anyone who opens it sees the shared view and cannot edit the record.",
+    text: "A signed-in tree can have a view-only link. Turn that link off, or replace it so the old address stops working.",
   },
 ];
 
@@ -54,6 +54,10 @@ const questions = [
   {
     question: "What does a share link show?",
     answer: "Only the shared view. People marked alive appear as Living. Everyone else keeps the details you recorded. The page has no editor.",
+  },
+  {
+    question: "Can I stop a share link?",
+    answer: "Yes. Turn the link off and the old address no longer opens the tree. Replace it when you want a new address and the previous one to stop working.",
   },
   {
     question: "Can the same person be their own ancestor?",

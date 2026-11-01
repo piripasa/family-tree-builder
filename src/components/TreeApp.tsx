@@ -19,7 +19,7 @@ import {
 } from "@/model/library";
 import { downloadTreeImage, downloadTreePdf } from "@/model/picture";
 import { sharedTree } from "@/model/share";
-import { createShareLink } from "@/model/shareLink";
+import { createShareLink, readShareLink, replaceShareLink, revokeShareLink } from "@/model/shareLink";
 import { loadLibrary, saveLibrary } from "@/model/storage";
 import { libraryChanges } from "@/model/sync";
 import {
@@ -50,6 +50,7 @@ export function TreeApp() {
   const canvasRef = useRef<TreeCanvasHandle>(null);
   const remoteRef = useRef<TreeLibrary | null>(null);
   const queueRef = useRef(Promise.resolve());
+  const shareTicket = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +109,27 @@ export function TreeApp() {
     }, 400);
     return () => window.clearTimeout(handle);
   }, [library, source]);
+
+  const shareTreeId = source === "account" && library ? activeTree(library).id : null;
+  useEffect(() => {
+    if (!shareTreeId) return;
+    const treeId = shareTreeId;
+    const ticket = ++shareTicket.current;
+    let cancelled = false;
+    void readShareLink(treeId).then(
+      (url) => {
+        if (cancelled || shareTicket.current !== ticket) return;
+        setShareNotice(url ? { url, copied: false } : null);
+      },
+      () => {
+        if (cancelled || shareTicket.current !== ticket) return;
+        setShareNotice(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [shareTreeId]);
 
   if (!library || !source) {
     return <main className="app loading">Loading family tree…</main>;
@@ -261,15 +283,10 @@ export function TreeApp() {
     setSource("local");
   }
 
-  async function onShare() {
-    setShareNotice(null);
-    if (source !== "account") {
-      setMessage("Sign in to share a link.");
-      return;
-    }
-    setMessage(null);
+  async function changeShare(run: (treeId: string) => Promise<string | null>, failure: string, copy: boolean) {
     const snapshot = shelf;
     const treeId = activeTree(snapshot).id;
+    const ticket = ++shareTicket.current;
     const pending = queueRef.current.then(async () => {
       const before = remoteRef.current;
       if (!before) throw new Error("Sign in to share a link.");
@@ -278,7 +295,7 @@ export function TreeApp() {
         await applyLibraryChanges(changes);
         remoteRef.current = snapshot;
       }
-      return createShareLink(treeId);
+      return run(treeId);
     });
     queueRef.current = pending.then(
       () => undefined,
@@ -286,17 +303,53 @@ export function TreeApp() {
     );
     try {
       const url = await pending;
+      if (shareTicket.current !== ticket) return;
+      if (!url) {
+        setShareNotice(null);
+        return;
+      }
       let copied = false;
-      try {
-        await navigator.clipboard.writeText(url);
-        copied = true;
-      } catch {
-        copied = false;
+      if (copy) {
+        try {
+          await navigator.clipboard.writeText(url);
+          copied = true;
+        } catch {
+          copied = false;
+        }
       }
       setShareNotice({ url, copied });
     } catch (error) {
-      setMessage(error instanceof Error && error.message ? error.message : "The share link could not be created.");
+      if (shareTicket.current !== ticket) return;
+      setMessage(error instanceof Error && error.message ? error.message : failure);
     }
+  }
+
+  async function onShare() {
+    if (source !== "account") {
+      setMessage("Sign in to share a link.");
+      return;
+    }
+    setMessage(null);
+    await changeShare(createShareLink, "The share link could not be created.", true);
+  }
+
+  async function onReplaceShare() {
+    if (!window.confirm("Replace this share link? The old address will stop working.")) return;
+    setMessage(null);
+    await changeShare(replaceShareLink, "The share link could not be replaced.", true);
+  }
+
+  async function onRevokeShare() {
+    if (!window.confirm("Turn off this share link? The old address will no longer open the tree.")) return;
+    setMessage(null);
+    await changeShare(
+      async (treeId) => {
+        await revokeShareLink(treeId);
+        return null;
+      },
+      "The share link could not be turned off.",
+      false,
+    );
   }
 
   function addRelative(source: RelativeSource, run: (source: RelativeSource) => TreeResult): boolean {
@@ -343,6 +396,12 @@ export function TreeApp() {
           void onShare();
         }}
         shareNotice={shareNotice}
+        onReplaceShare={() => {
+          void onReplaceShare();
+        }}
+        onRevokeShare={() => {
+          void onRevokeShare();
+        }}
         onToggleShare={() => setSharing((value) => !value)}
         onZoomIn={() => canvasRef.current?.zoomIn()}
         onZoomOut={() => canvasRef.current?.zoomOut()}
