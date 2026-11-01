@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { PersonFinder } from "@/components/PersonFinder";
 import { readProfilePhoto } from "@/model/photo";
 import {
   childrenOf,
@@ -262,6 +263,8 @@ export function EditorPanel({
         <button type="button" className="danger" onClick={() => onDelete(person.id)}>
           Delete {displayName(person)}
         </button>
+
+        <PersonFinder document={document} focusId={person.id} onFocus={onFocus} />
 
         <div className="everyone">
           <h3>Everyone</h3>

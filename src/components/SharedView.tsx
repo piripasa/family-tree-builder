@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
+import { PersonFinder } from "@/components/PersonFinder";
 import { loadShare } from "@/model/shareLink";
 import { displayName, lifeSpan, personMenuLabel, setFocus } from "@/model/tree";
 import type { Person, TreeDocument } from "@/model/types";
@@ -64,6 +65,11 @@ export function SharedView({ token }: { token: string }) {
             <p className="eyebrow">Shared view</p>
             <h2>{displayName(person)}</h2>
             <SharedDetails person={person} />
+            <PersonFinder
+              document={document}
+              focusId={person.id}
+              onFocus={(personId) => setDocument(setFocus(document, personId))}
+            />
             <div className="everyone">
               <h3>Everyone</h3>
               <ul>

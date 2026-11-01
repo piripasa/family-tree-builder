@@ -450,6 +450,26 @@ button:focus-visible,
   margin-bottom: 0.35rem;
 }
 
+.finder {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.finder h3 {
+  font-size: 0.95rem;
+}
+
+.finder-matches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.finder-result {
+  line-height: 1.45;
+}
+
 .everyone ul {
   list-style: none;
   margin: 0;
