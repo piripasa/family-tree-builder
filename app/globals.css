@@ -203,6 +203,38 @@ h2,
   white-space: nowrap;
 }
 
+.menu {
+  position: relative;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 5;
+  min-width: 9.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.menu-panel button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.menu-panel button:hover,
+.menu-panel button:focus-visible {
+  background: var(--paper-deep);
+}
+
 .file-button {
   position: relative;
   overflow: hidden;
