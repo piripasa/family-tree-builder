@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  describeSource,
-  sourceDetailLimit,
-  sourceFactLabel,
-  sourceKindLabel,
-} from "@/model/source";
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateError } from "@/i18n/errors";
+import { sourceDetailLimit } from "@/model/source";
 import type { FactSource, SourceFact, SourceKind } from "@/model/types";
 
 export function SourceEditor({
@@ -26,6 +23,7 @@ export function SourceEditor({
   const [kind, setKind] = useState<SourceKind>("person");
   const [detail, setDetail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { locale, messages } = useI18n();
   const chosenFact = facts.includes(fact) ? fact : facts[0];
 
   if (!chosenFact) return null;
@@ -42,19 +40,17 @@ export function SourceEditor({
 
   return (
     <section className="sources">
-      {heading ? <h3>Sources</h3> : null}
-      {facts.includes("marriage") ? null : (
-        <p className="hint">
-          A person, a certificate, or a short note for a fact. A share link leaves every source out.
-        </p>
-      )}
+      {heading ? <h3>{messages.sources.heading}</h3> : null}
+      {facts.includes("marriage") ? null : <p className="hint">{messages.sources.hint}</p>}
       {sources.length > 0 ? (
         <ul>
           {sources.map((source) => (
             <li key={source.id} className="source">
-              <p>{describeSource(source)}</p>
+              <p>
+                {messages.facts[source.fact]} · {messages.sourceKinds[source.kind]} · {source.detail}
+              </p>
               <button type="button" onClick={() => onRemove(source.id)}>
-                Remove {sourceFactLabel(source.fact).toLowerCase()} source
+                {messages.sources.remove(messages.facts[source.fact])}
               </button>
             </li>
           ))}
@@ -62,7 +58,7 @@ export function SourceEditor({
       ) : null}
       {facts.length > 1 ? (
         <label className="field">
-          Fact
+          {messages.sources.fact}
           <select
             value={chosenFact}
             onChange={(event) => {
@@ -72,14 +68,14 @@ export function SourceEditor({
           >
             {facts.map((item) => (
               <option key={item} value={item}>
-                {sourceFactLabel(item)}
+                {messages.facts[item]}
               </option>
             ))}
           </select>
         </label>
       ) : null}
       <label className="field">
-        From
+        {messages.sources.from}
         <select
           value={kind}
           onChange={(event) => {
@@ -87,13 +83,13 @@ export function SourceEditor({
             setError(null);
           }}
         >
-          <option value="person">{sourceKindLabel("person")}</option>
-          <option value="certificate">{sourceKindLabel("certificate")}</option>
-          <option value="note">{sourceKindLabel("note")}</option>
+          <option value="person">{messages.sourceKinds.person}</option>
+          <option value="certificate">{messages.sourceKinds.certificate}</option>
+          <option value="note">{messages.sourceKinds.note}</option>
         </select>
       </label>
       <label className="field">
-        {kind === "person" ? "Person" : kind === "certificate" ? "Certificate" : "Short note"}
+        {messages.sourceFields[kind]}
         <input
           value={detail}
           maxLength={sourceDetailLimit(kind)}
@@ -103,11 +99,11 @@ export function SourceEditor({
       </label>
       {error ? (
         <p className="message" role="alert">
-          {error}
+          {translateError(locale, error)}
         </p>
       ) : null}
       <button type="button" className="primary" onClick={submit}>
-        Add source
+        {messages.sources.add}
       </button>
     </section>
   );

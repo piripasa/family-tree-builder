@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { coupleLabel, personOption } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateError } from "@/i18n/errors";
 import { submitSuggestion } from "@/model/suggestionClient";
 import { isHiddenOnShare } from "@/model/share";
 import type { SuggestionDraft } from "@/model/suggestion";
-import { partnershipLabel, partnershipsAsPartner, personMenuLabel } from "@/model/tree";
+import { partnershipsAsPartner } from "@/model/tree";
 import type { TreeDocument } from "@/model/types";
 
 type Kind = SuggestionDraft["kind"];
@@ -28,6 +31,8 @@ export function SuggestionForm({ token, document }: { token: string; document: T
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { locale, messages } = useI18n();
+  const text = messages.suggestions;
 
   const partnerships = useMemo(
     () => (relation === "child" ? partnershipsAsPartner(document, relatedToId) : []),
@@ -91,13 +96,10 @@ export function SuggestionForm({ token, document }: { token: string; document: T
 
   return (
     <form className="suggest" onSubmit={(event) => void submit(event)}>
-      <h3>Suggest a change</h3>
-      <p className="hint">
-        Living people appear as Living. A date or correction can only be suggested for someone whose details are already
-        on this page. The owner accepts it before the tree changes.
-      </p>
+      <h3>{text.heading}</h3>
+      <p className="hint">{text.hint}</p>
       <label className="field">
-        Suggestion
+        {text.kind}
         <select
           value={kind}
           onChange={(event) => {
@@ -106,47 +108,47 @@ export function SuggestionForm({ token, document }: { token: string; document: T
             setSent(false);
           }}
         >
-          <option value="person">Add a person</option>
-          <option value="date">A date</option>
-          <option value="correction">A correction</option>
+          <option value="person">{text.addAPerson}</option>
+          <option value="date">{text.aDate}</option>
+          <option value="correction">{text.aCorrection}</option>
         </select>
       </label>
       {kind === "person" ? (
         <>
           <label className="field">
-            Given name
+            {messages.profile.givenName}
             <input value={givenName} onChange={(event) => setGivenName(event.target.value)} autoComplete="off" maxLength={80} required />
           </label>
           <label className="field">
-            Family name
+            {messages.profile.familyName}
             <input value={familyName} onChange={(event) => setFamilyName(event.target.value)} autoComplete="off" maxLength={80} />
           </label>
           <label className="field">
-            Relation
+            {text.relation}
             <select value={relation} onChange={(event) => setRelation(event.target.value as "parent" | "partner" | "child")}>
-              <option value="parent">Parent</option>
-              <option value="partner">Partner</option>
-              <option value="child">Child</option>
+              <option value="parent">{text.parent}</option>
+              <option value="partner">{text.partner}</option>
+              <option value="child">{text.child}</option>
             </select>
           </label>
           <label className="field">
-            Of
+            {text.of}
             <select value={relatedToId} onChange={(event) => setRelatedToId(event.target.value)}>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>
-                  {personMenuLabel(person)}
+                  {personOption(person, messages)}
                 </option>
               ))}
             </select>
           </label>
           {partnerships.length > 1 ? (
             <label className="field">
-              Couple
+              {text.couple}
               <select value={partnershipId} onChange={(event) => setPartnershipId(event.target.value)} required>
-                <option value="">Choose</option>
+                <option value="">{text.choose}</option>
                 {partnerships.map((partnership) => (
                   <option key={partnership.id} value={partnership.id}>
-                    {partnershipLabel(document, partnership, relatedToId)}
+                    {coupleLabel(document, partnership, relatedToId, messages)}
                   </option>
                 ))}
               </select>
@@ -154,15 +156,15 @@ export function SuggestionForm({ token, document }: { token: string; document: T
           ) : null}
         </>
       ) : visible.length === 0 ? (
-        <p className="hint">Everyone on this page is marked living, so a date or correction stays with the owner.</p>
+        <p className="hint">{text.everyoneLiving}</p>
       ) : (
         <>
           <label className="field">
-            Person
+            {messages.family.person}
             <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
               {visible.map((person) => (
                 <option key={person.id} value={person.id}>
-                  {personMenuLabel(person)}
+                  {personOption(person, messages)}
                 </option>
               ))}
             </select>
@@ -170,36 +172,36 @@ export function SuggestionForm({ token, document }: { token: string; document: T
           {kind === "date" ? (
             <>
               <label className="field">
-                Date
+                {text.date}
                 <select value={dateField} onChange={(event) => setDateField(event.target.value as "birthDate" | "deathDate")}>
-                  <option value="birthDate">Birth date</option>
-                  <option value="deathDate">Death date</option>
+                  <option value="birthDate">{messages.profile.birthDate}</option>
+                  <option value="deathDate">{messages.profile.deathDate}</option>
                 </select>
               </label>
               <label className="field">
-                When
+                {text.when}
                 <input type="date" value={dateValue} onChange={(event) => setDateValue(event.target.value)} required />
               </label>
             </>
           ) : (
             <>
               <label className="field">
-                Correct
+                {text.correct}
                 <select
                   value={correctionField}
                   onChange={(event) =>
                     setCorrectionField(event.target.value as "givenName" | "familyName" | "birthPlace" | "deathPlace" | "note")
                   }
                 >
-                  <option value="givenName">Given name</option>
-                  <option value="familyName">Family name</option>
-                  <option value="birthPlace">Birth place</option>
-                  <option value="deathPlace">Death place</option>
-                  <option value="note">Note</option>
+                  <option value="givenName">{messages.profile.givenName}</option>
+                  <option value="familyName">{messages.profile.familyName}</option>
+                  <option value="birthPlace">{messages.profile.birthPlace}</option>
+                  <option value="deathPlace">{messages.profile.deathPlace}</option>
+                  <option value="note">{messages.profile.note}</option>
                 </select>
               </label>
               <label className="field">
-                New value
+                {text.newValue}
                 {correctionField === "note" ? (
                   <textarea value={correction} onChange={(event) => setCorrection(event.target.value)} maxLength={2000} rows={3} required />
                 ) : (
@@ -218,12 +220,12 @@ export function SuggestionForm({ token, document }: { token: string; document: T
       )}
       {error ? (
         <p className="message" role="alert">
-          {error}
+          {translateError(locale, error)}
         </p>
       ) : null}
-      {sent ? <p className="hint">Suggestion sent. The owner can accept it.</p> : null}
+      {sent ? <p className="hint">{text.sent}</p> : null}
       <button type="submit" className="primary" disabled={busy || (kind !== "person" && visible.length === 0)}>
-        Send suggestion
+        {text.send}
       </button>
     </form>
   );

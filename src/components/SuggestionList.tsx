@@ -1,6 +1,8 @@
 "use client";
 
-import { describeSuggestion, type StoredSuggestion } from "@/model/suggestion";
+import { formatSuggestion } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { StoredSuggestion } from "@/model/suggestion";
 import type { TreeDocument } from "@/model/types";
 
 export function SuggestionList({
@@ -16,20 +18,21 @@ export function SuggestionList({
   onAccept: (suggestionId: string) => void;
   onDecline: (suggestionId: string) => void;
 }) {
+  const { messages } = useI18n();
   if (suggestions.length === 0) return null;
   return (
     <section className="suggestions">
-      <h3>Suggestions</h3>
+      <h3>{messages.suggestions.title}</h3>
       <ul>
         {suggestions.map((suggestion) => (
           <li key={suggestion.id} className="suggestion">
-            <p>{describeSuggestion(document, suggestion)}</p>
+            <p>{formatSuggestion(document, suggestion, messages)}</p>
             <div className="suggestion-actions">
               <button type="button" className="primary" disabled={busy} onClick={() => onAccept(suggestion.id)}>
-                Accept
+                {messages.suggestions.accept}
               </button>
               <button type="button" disabled={busy} onClick={() => onDecline(suggestion.id)}>
-                Decline
+                {messages.suggestions.decline}
               </button>
             </div>
           </li>

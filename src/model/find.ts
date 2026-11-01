@@ -1,7 +1,25 @@
 import { childrenOf, displayName, getPerson, parentsOf, partnersOf } from "./tree";
 import type { TreeDocument } from "./types";
 
-type Step = "parent" | "child" | "partner";
+export type RelationStep = "parent" | "child" | "partner";
+
+type Step = RelationStep;
+
+export type Connection =
+  | { type: "missing" }
+  | { type: "self"; id: string }
+  | { type: "apart"; fromId: string; toId: string }
+  | { type: "linked"; fromId: string; toId: string; steps: RelationStep[] };
+
+export function connection(doc: TreeDocument, fromId: string, toId: string): Connection {
+  const from = getPerson(doc, fromId);
+  const to = getPerson(doc, toId);
+  if (!from || !to) return { type: "missing" };
+  if (fromId === toId) return { type: "self", id: fromId };
+  const steps = shortestPath(doc, fromId, toId);
+  if (!steps) return { type: "apart", fromId, toId };
+  return { type: "linked", fromId, toId, steps };
+}
 
 export function searchPeople(doc: TreeDocument, query: string) {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -13,13 +31,15 @@ export function searchPeople(doc: TreeDocument, query: string) {
 }
 
 export function describeRelation(doc: TreeDocument, fromId: string, toId: string): string | null {
-  const from = getPerson(doc, fromId);
-  const to = getPerson(doc, toId);
-  if (!from || !to) return null;
-  if (fromId === toId) return `${displayName(from)} is the selected person.`;
-  const steps = shortestPath(doc, fromId, toId);
-  if (!steps) return `${displayName(to)} is not connected to ${displayName(from)} in this tree.`;
-  return `${displayName(to)} is ${displayName(from)}'s ${relationLabel(steps)}.`;
+  const link = connection(doc, fromId, toId);
+  if (link.type === "missing") return null;
+  const name = (id: string) => {
+    const person = getPerson(doc, id);
+    return person ? displayName(person) : "Unnamed";
+  };
+  if (link.type === "self") return `${name(link.id)} is the selected person.`;
+  if (link.type === "apart") return `${name(link.toId)} is not connected to ${name(link.fromId)} in this tree.`;
+  return `${name(link.toId)} is ${name(link.fromId)}'s ${relationLabel(link.steps)}.`;
 }
 
 function shortestPath(doc: TreeDocument, fromId: string, toId: string): Step[] | null {

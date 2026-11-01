@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function AccountMenu({
   email,
@@ -18,6 +19,8 @@ export function AccountMenu({
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const { messages } = useI18n();
+  const text = messages.account;
 
   if (email) {
     return (
@@ -31,7 +34,7 @@ export function AccountMenu({
           }}
           disabled={busy}
         >
-          Sign out
+          {text.signOut}
         </button>
       </div>
     );
@@ -40,7 +43,7 @@ export function AccountMenu({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)}>
-        Sign in
+        {text.signIn}
       </button>
     );
   }
@@ -59,7 +62,7 @@ export function AccountMenu({
     <form className="account" onSubmit={(event) => void submit(event)}>
       <input
         type="email"
-        aria-label="Email"
+        aria-label={text.email}
         value={address}
         onChange={(event) => setAddress(event.target.value)}
         autoComplete="username"
@@ -67,7 +70,7 @@ export function AccountMenu({
       />
       <input
         type="password"
-        aria-label="Password"
+        aria-label={text.password}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
@@ -75,14 +78,14 @@ export function AccountMenu({
         required
       />
       <button type="submit" className="primary" disabled={busy}>
-        {mode === "sign-up" ? "Create account" : "Sign in"}
+        {mode === "sign-up" ? text.create : text.signIn}
       </button>
       <button
         type="button"
         onClick={() => setMode((value) => (value === "sign-up" ? "sign-in" : "sign-up"))}
         disabled={busy}
       >
-        {mode === "sign-up" ? "Have an account?" : "Create account"}
+        {mode === "sign-up" ? text.haveAccount : text.create}
       </button>
     </form>
   );

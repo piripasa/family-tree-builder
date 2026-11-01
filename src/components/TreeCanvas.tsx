@@ -1,8 +1,11 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { personName, personYears } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
 import { CARD_HEIGHT, CARD_WIDTH, layoutTree, type TreeLayout } from "@/model/layout";
-import { displayName, getPerson, lifeSpan } from "@/model/tree";
+import { getPerson } from "@/model/tree";
+import { isHiddenOnShare } from "@/model/share";
 import type { TreeDocument } from "@/model/types";
 
 export type TreeCanvasHandle = {
@@ -20,6 +23,7 @@ export const TreeCanvas = forwardRef<
   TreeCanvasHandle,
   { document: TreeDocument; onFocus: (personId: string) => void }
 >(function TreeCanvas({ document, onFocus }, ref) {
+  const { messages } = useI18n();
   const layout = useMemo(() => layoutTree(document), [document]);
   const svgRef = useRef<SVGSVGElement>(null);
   const viewRef = useRef<View>({ x: 40, y: 40, scale: 1 });
@@ -108,7 +112,7 @@ export const TreeCanvas = forwardRef<
         ref={svgRef}
         className="tree-svg"
         role="application"
-        aria-label="Family tree"
+        aria-label={messages.canvas.label}
         onPointerDown={onPointerDown}
       >
         <rect className="pan-surface" width="100%" height="100%" />
@@ -119,7 +123,7 @@ export const TreeCanvas = forwardRef<
                 <path d={line.d} className="tree-line" />
                 {line.label != null && line.labelX != null && line.labelY != null ? (
                   <text x={line.labelX} y={line.labelY} className="tree-label">
-                    {line.label}
+                    {marriageLabel(line.label, messages)}
                   </text>
                 ) : null}
               </g>
@@ -127,11 +131,12 @@ export const TreeCanvas = forwardRef<
             {layout.cards.map((card, index) => {
               const person = getPerson(document, card.personId);
               if (!person) return null;
-              const family = person.familyName.trim();
-              const given = person.givenName.trim() || "Unnamed";
-              const span = lifeSpan(person);
+              const hidden = isHiddenOnShare(person);
+              const family = hidden ? "" : person.familyName.trim();
+              const given = hidden ? messages.living : person.givenName.trim() || messages.unnamed;
+              const span = personYears(person, messages);
               const textX = person.photo ? 56 : 16;
-              const label = [displayName(person), span].filter(Boolean).join(", ");
+              const label = [personName(person, messages), span].filter(Boolean).join(", ");
               return (
                 <g
                   key={`${card.personId}-${index}`}
@@ -183,12 +188,12 @@ export const TreeCanvas = forwardRef<
                   ) : null}
                   {card.hiddenUp ? (
                     <circle cx={CARD_WIDTH / 2} cy={-8} r="3.5" className="more-mark">
-                      <title>More ancestors</title>
+                      <title>{messages.canvas.moreAncestors}</title>
                     </circle>
                   ) : null}
                   {card.hiddenDown ? (
                     <circle cx={CARD_WIDTH / 2} cy={CARD_HEIGHT + 8} r="3.5" className="more-mark">
-                      <title>More descendants</title>
+                      <title>{messages.canvas.moreDescendants}</title>
                     </circle>
                   ) : null}
                 </g>
@@ -200,6 +205,11 @@ export const TreeCanvas = forwardRef<
     </div>
   );
 });
+
+function marriageLabel(label: string, messages: ReturnType<typeof useI18n>["messages"]): string {
+  const married = /^m\. (\d{4})$/.exec(label);
+  return married ? messages.canvas.married(married[1]) : label;
+}
 
 function fitView(viewportW: number, viewportH: number, layout: TreeLayout): View {
   const pad = 48;

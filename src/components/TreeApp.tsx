@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { EditorPanel } from "@/components/EditorPanel";
 import { Toolbar } from "@/components/Toolbar";
 import { TreeCanvas, type TreeCanvasHandle } from "@/components/TreeCanvas";
+import { personName } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
 import { applyLibraryChanges, fetchSession, loadAccountLibrary, signIn, signOut, signUp } from "@/model/account";
 import { downloadGedcom, parseGedcom } from "@/model/gedcom";
 import { downloadTree, parseTreeDocument } from "@/model/io";
@@ -33,7 +35,6 @@ import {
   addParent,
   addPartner,
   deletePerson,
-  displayName,
   setFocus,
   updatePerson,
   updatePartnership,
@@ -44,7 +45,11 @@ const SAVE_FAILED = "This tree could not be saved in this browser. Export a file
 const ACCOUNT_SAVE_FAILED = "This tree could not be saved to your account. Export a file so you do not lose it.";
 
 export function TreeApp() {
+  const { messages } = useI18n();
   const [library, setLibrary] = useState<TreeLibrary | null>(null);
+  useEffect(() => {
+    window.document.title = messages.treeTitle;
+  }, [messages.treeTitle]);
   const [source, setSource] = useState<"local" | "account" | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -195,7 +200,7 @@ export function TreeApp() {
   }, [suggestionTreeId]);
 
   if (!library || !source) {
-    return <main className="app loading">Loading family tree…</main>;
+    return <main className="app loading">{messages.loading}</main>;
   }
 
   const shelf = library;
@@ -284,7 +289,7 @@ export function TreeApp() {
   }
 
   function onDeleteTree() {
-    const title = current.title.trim() || "Untitled";
+    const title = current.title.trim() || messages.untitled;
     const only = shelf.trees.length === 1;
     if (!hasPeople) {
       if (only) return;
@@ -293,9 +298,8 @@ export function TreeApp() {
       setLibrary(deleteActiveTree(shelf));
       return;
     }
-    const question = only
-      ? `Clear ${title}? The people in it will be removed from ${source === "account" ? "your account" : "this browser"}.`
-      : `Delete ${title}? It will be removed from ${source === "account" ? "your account" : "this browser"}.`;
+    const where = source === "account" ? messages.confirm.whereAccount : messages.confirm.whereBrowser;
+    const question = only ? messages.confirm.clearTree(title, where) : messages.confirm.deleteTree(title, where);
     if (!window.confirm(question)) return;
     setMessage(null);
     setShareNotice(null);
@@ -327,7 +331,7 @@ export function TreeApp() {
       setMessage(parsed.error);
       return;
     }
-    if (hasPeople && !window.confirm("Replace the current tree with this file?")) return;
+    if (hasPeople && !window.confirm(messages.confirm.replaceFile)) return;
     setMessage(null);
     setSharing(false);
     remember(`import:${crypto.randomUUID()}`);
@@ -337,7 +341,7 @@ export function TreeApp() {
   function onDelete(personId: string) {
     const person = document.people.find((item) => item.id === personId);
     if (!person) return;
-    if (!window.confirm(`Remove ${displayName(person)} from the tree? Their relationships will be detached.`)) {
+    if (!window.confirm(messages.confirm.removePerson(personName(person, messages)))) {
       return;
     }
     const next = deletePerson(document, personId);
@@ -446,13 +450,13 @@ export function TreeApp() {
   }
 
   async function onReplaceShare() {
-    if (!window.confirm("Replace this share link? The old address will stop working.")) return;
+    if (!window.confirm(messages.confirm.replaceShare)) return;
     setMessage(null);
     await changeShare(replaceShareLink, "The share link could not be replaced.", true);
   }
 
   async function onRevokeShare() {
-    if (!window.confirm("Turn off this share link? The old address will no longer open the tree.")) return;
+    if (!window.confirm(messages.confirm.revokeShare)) return;
     setMessage(null);
     await changeShare(
       async (treeId) => {
@@ -627,14 +631,11 @@ export function TreeApp() {
       ) : (
         <section className="empty-state">
           <form onSubmit={onStart}>
-            <p className="eyebrow">{source === "account" ? "Saved in your account" : "A private tree in this browser"}</p>
-            <h2>Start a family tree</h2>
-            <p className="lede">
-              Add one person, then attach parents, a partner, and children. Click anyone to follow the tree backward
-              or forward. Export keeps every detail. Share leaves out living people&apos;s private details.
-            </p>
+            <p className="eyebrow">{source === "account" ? messages.empty.account : messages.empty.browser}</p>
+            <h2>{messages.empty.title}</h2>
+            <p className="lede">{messages.empty.lede}</p>
             <label className="field">
-              Given name
+              {messages.empty.givenName}
               <input
                 value={givenName}
                 onChange={(event) => setGivenName(event.target.value)}
@@ -644,7 +645,7 @@ export function TreeApp() {
               />
             </label>
             <label className="field">
-              Family name
+              {messages.empty.familyName}
               <input
                 value={familyName}
                 onChange={(event) => setFamilyName(event.target.value)}
@@ -652,7 +653,7 @@ export function TreeApp() {
               />
             </label>
             <button type="submit" className="primary">
-              Start with this person
+              {messages.empty.start}
             </button>
           </form>
         </section>

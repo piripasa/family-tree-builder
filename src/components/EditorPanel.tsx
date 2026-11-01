@@ -3,18 +3,18 @@
 import { useEffect, useId, useState } from "react";
 import { PersonFinder } from "@/components/PersonFinder";
 import { SourceEditor } from "@/components/SourceEditor";
+import { coupleLabel, personName, personOption } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateError } from "@/i18n/errors";
 import { readProfilePhoto } from "@/model/photo";
 import { SuggestionList } from "@/components/SuggestionList";
 import { addMarriageSource, addPersonSource, removeMarriageSource, removePersonSource } from "@/model/source";
 import type { StoredSuggestion } from "@/model/suggestion";
 import {
   childrenOf,
-  displayName,
   eligiblePeople,
   isAlive,
   parentsOf,
-  personMenuLabel,
-  partnershipLabel,
   partnershipsAsPartner,
   partnersOf,
 } from "@/model/tree";
@@ -60,6 +60,7 @@ export function EditorPanel({
   onDeclineSuggestion: (suggestionId: string) => void;
 }) {
   const person = document.people.find((item) => item.id === document.focusId);
+  const { locale, messages } = useI18n();
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [tab, setTab] = useState<PanelTab>("profile");
 
@@ -84,26 +85,26 @@ export function EditorPanel({
   const partnerships = partnershipsAsPartner(document, person.id);
   const couples = partnerships.filter((partnership) => partnership.partnerIds.length === 2);
   const tabs: { id: PanelTab; label: string }[] = [
-    { id: "profile", label: "Profile" },
-    { id: "family", label: "Family" },
-    { id: "sources", label: "Sources" },
-    { id: "people", label: "People" },
-    { id: "record", label: "Record" },
+    { id: "profile", label: messages.panel.profile },
+    { id: "family", label: messages.panel.family },
+    { id: "sources", label: messages.panel.sources },
+    { id: "people", label: messages.panel.people },
+    { id: "record", label: messages.panel.record },
   ];
-  if (suggestions.length > 0) tabs.unshift({ id: "suggestions", label: "Suggestions" });
+  if (suggestions.length > 0) tabs.unshift({ id: "suggestions", label: messages.panel.suggestions });
 
   return (
     <aside className="panel">
       <header className="panel-head">
         {sharing ? (
           <p className="share-banner">
-            Shared view. Living people stay in the tree and appear as Living, without their private details.
+            {messages.panel.shareBanner}
           </p>
         ) : null}
-        <p className="eyebrow">Selected person</p>
-        <h2>{displayName(person)}</h2>
+        <p className="eyebrow">{messages.panel.selected}</p>
+        <h2>{personName(person, messages)}</h2>
       </header>
-      <div className="panel-tabs" role="tablist" aria-label="Person details">
+      <div className="panel-tabs" role="tablist" aria-label={messages.panel.details}>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -139,7 +140,7 @@ export function EditorPanel({
         {tab === "profile" ? (
         <>
         <label className="field">
-          Given name
+          {messages.profile.givenName}
           <input
             value={person.givenName}
             onChange={(event) => onUpdate(person.id, { givenName: event.target.value })}
@@ -147,7 +148,7 @@ export function EditorPanel({
           />
         </label>
         <label className="field">
-          Family name
+          {messages.profile.familyName}
           <input
             value={person.familyName}
             onChange={(event) => onUpdate(person.id, { familyName: event.target.value })}
@@ -161,9 +162,9 @@ export function EditorPanel({
             checked={alive}
             onChange={(event) => onUpdate(person.id, { living: event.target.checked })}
           />
-          Alive
+          {messages.profile.alive}
         </label>
-        <p className="hint">A share link shows someone marked alive only as Living.</p>
+        <p className="hint">{messages.profile.aliveHint}</p>
 
         <div className="photo-row">
           {person.photo ? (
@@ -173,7 +174,7 @@ export function EditorPanel({
           )}
           <div className="photo-actions">
             <label className="file-button">
-              {person.photo ? "Change photo" : "Add photo"}
+              {person.photo ? messages.profile.changePhoto : messages.profile.addPhoto}
               <input
                 type="file"
                 accept="image/*"
@@ -195,20 +196,20 @@ export function EditorPanel({
             </label>
             {person.photo ? (
               <button type="button" onClick={() => onUpdate(person.id, { photo: "" })}>
-                Remove photo
+                {messages.profile.removePhoto}
               </button>
             ) : null}
           </div>
         </div>
         {photoError ? (
           <p className="message" role="alert">
-            {photoError}
+            {translateError(locale, photoError)}
           </p>
         ) : null}
 
         <div className="profile-grid">
           <label className="field">
-            Birth date
+            {messages.profile.birthDate}
             <input
               type="date"
               value={person.birthDate ?? ""}
@@ -216,7 +217,7 @@ export function EditorPanel({
             />
           </label>
           <label className="field">
-            Birth place
+            {messages.profile.birthPlace}
             <input
               value={person.birthPlace ?? ""}
               onChange={(event) => onUpdate(person.id, { birthPlace: event.target.value })}
@@ -226,7 +227,7 @@ export function EditorPanel({
           {alive ? null : (
             <>
               <label className="field">
-                Death date
+                {messages.profile.deathDate}
                 <input
                   type="date"
                   value={person.deathDate ?? ""}
@@ -234,7 +235,7 @@ export function EditorPanel({
                 />
               </label>
               <label className="field">
-                Death place
+                {messages.profile.deathPlace}
                 <input
                   value={person.deathPlace ?? ""}
                   onChange={(event) => onUpdate(person.id, { deathPlace: event.target.value })}
@@ -244,9 +245,9 @@ export function EditorPanel({
             </>
           )}
         </div>
-        {datesInverted ? <p className="hint">The death date is earlier than the birth date.</p> : null}
+        {datesInverted ? <p className="hint">{messages.profile.datesInverted}</p> : null}
         <label className="field">
-          Note
+          {messages.profile.note}
           <textarea
             rows={2}
             maxLength={2000}
@@ -259,18 +260,18 @@ export function EditorPanel({
 
         {tab === "family" ? (
         <>
-          <p className="hint">Parents sit above this person on the canvas. Partners and children sit below.</p>
+          <p className="hint">{messages.family.hint}</p>
           <dl className="relations">
-            <RelationList label="Parents" people={parents} onFocus={onFocus} />
-            <RelationList label="Partners" people={partners} onFocus={onFocus} />
-            <RelationList label="Children" people={children} onFocus={onFocus} />
+            <RelationList label={messages.family.parents} people={parents} onFocus={onFocus} />
+            <RelationList label={messages.family.partners} people={partners} onFocus={onFocus} />
+            <RelationList label={messages.family.children} people={children} onFocus={onFocus} />
           </dl>
 
         {couples.map((partnership) => (
             <fieldset key={partnership.id} className="marriage">
-              <legend>{partnershipLabel(document, partnership, person.id)}</legend>
+              <legend>{coupleLabel(document, partnership, person.id, messages)}</legend>
               <label className="field">
-                Marriage date
+                {messages.family.marriageDate}
                 <input
                   type="date"
                   value={partnership.marriageDate ?? ""}
@@ -280,7 +281,7 @@ export function EditorPanel({
                 />
               </label>
               <label className="field">
-                Marriage place
+                {messages.family.marriagePlace}
                 <input
                   value={partnership.marriagePlace ?? ""}
                   maxLength={160}
@@ -294,11 +295,11 @@ export function EditorPanel({
           ))}
 
         {parents.length >= 2 ? (
-          <p className="hint">This person already has two parents.</p>
+          <p className="hint">{messages.family.twoParents}</p>
         ) : (
           <RelativeForm
             key={`parent-${person.id}`}
-            title="Add parent"
+            title={messages.family.addParent}
             role="parent"
             document={document}
             personId={person.id}
@@ -308,7 +309,7 @@ export function EditorPanel({
         )}
         <RelativeForm
           key={`partner-${person.id}`}
-          title="Add partner"
+          title={messages.family.addPartner}
           role="partner"
           document={document}
           personId={person.id}
@@ -317,13 +318,13 @@ export function EditorPanel({
         />
         <RelativeForm
           key={`child-${person.id}`}
-          title="Add child"
+          title={messages.family.addChild}
           role="child"
           document={document}
           personId={person.id}
           partnerships={partnerships.map((partnership) => ({
             id: partnership.id,
-            label: partnershipLabel(document, partnership, person.id),
+            label: coupleLabel(document, partnership, person.id, messages),
           }))}
           onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
         />
@@ -347,7 +348,7 @@ export function EditorPanel({
           />
           {couples.map((partnership) => (
             <fieldset key={`${partnership.id}-sources`} className="marriage">
-              <legend>{partnershipLabel(document, partnership, person.id)}</legend>
+              <legend>{coupleLabel(document, partnership, person.id, messages)}</legend>
               <SourceEditor
                 sources={partnership.sources ?? []}
                 facts={["marriage"]}
@@ -369,7 +370,7 @@ export function EditorPanel({
         <>
           <PersonFinder document={document} focusId={person.id} onFocus={onFocus} />
           <div className="everyone">
-          <h3>Everyone</h3>
+          <h3>{messages.shared.everyone}</h3>
           <ul>
             {document.people.map((item) => (
               <li key={item.id}>
@@ -379,7 +380,7 @@ export function EditorPanel({
                   aria-current={item.id === person.id ? "true" : undefined}
                   onClick={() => onFocus(item.id)}
                 >
-                  {personMenuLabel(item)}
+                  {personOption(item, messages)}
                 </button>
               </li>
             ))}
@@ -398,7 +399,7 @@ export function EditorPanel({
             />
           ) : null}
           <button type="button" className="danger" onClick={() => onDelete(person.id)}>
-            Delete {displayName(person)}
+            {messages.record.delete(personName(person, messages))}
           </button>
         </>
         ) : null}
@@ -418,6 +419,7 @@ function MergeForm({
 }) {
   const [otherId, setOtherId] = useState(others[0]?.id ?? "");
   const [confirming, setConfirming] = useState(false);
+  const { messages } = useI18n();
   const other = others.find((item) => item.id === otherId);
 
   useEffect(() => {
@@ -429,12 +431,10 @@ function MergeForm({
 
   return (
     <section className="adder merge">
-      <h3>Merge another record</h3>
-      <p className="hint">
-        This person&apos;s name stays. Empty details are filled from the other record, and that record is removed.
-      </p>
+      <h3>{messages.record.mergeTitle}</h3>
+      <p className="hint">{messages.record.mergeHint}</p>
       <label className="field">
-        Other record
+        {messages.record.other}
         <select
           value={otherId}
           onChange={(event) => {
@@ -444,7 +444,7 @@ function MergeForm({
         >
           {others.map((item) => (
             <option key={item.id} value={item.id}>
-              {personMenuLabel(item)}
+              {personOption(item, messages)}
             </option>
           ))}
         </select>
@@ -452,7 +452,7 @@ function MergeForm({
       {confirming && other ? (
         <div className="merge-actions">
           <p>
-            Merge {displayName(other)} into {displayName(person)}? {displayName(other)} will be removed.
+            {messages.record.ask(personName(other, messages), personName(person, messages))}
           </p>
           <button
             type="button"
@@ -461,15 +461,15 @@ function MergeForm({
               if (onMerge(other.id)) setConfirming(false);
             }}
           >
-            Merge records
+            {messages.record.merge}
           </button>
           <button type="button" onClick={() => setConfirming(false)}>
-            Cancel
+            {messages.cancel}
           </button>
         </div>
       ) : (
         <button type="button" onClick={() => setConfirming(true)} disabled={!other}>
-          Merge into this person
+          {messages.record.into}
         </button>
       )}
     </section>
@@ -485,15 +485,16 @@ function RelationList({
   people: Person[];
   onFocus: (personId: string) => void;
 }) {
+  const { messages } = useI18n();
   return (
     <div>
       <dt>{label}</dt>
       <dd>
         {people.length === 0
-          ? "None yet"
+          ? messages.noneYet
           : people.map((person) => (
               <button key={person.id} type="button" className="text-link" onClick={() => onFocus(person.id)}>
-                {personMenuLabel(person)}
+                {personOption(person, messages)}
               </button>
             ))}
       </dd>
@@ -516,6 +517,7 @@ function RelativeForm({
   partnerships: { id: string; label: string }[];
   onSubmit: (source: RelativeSource, partnershipId?: string) => boolean;
 }) {
+  const { messages } = useI18n();
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"new" | "existing">("new");
@@ -565,7 +567,7 @@ function RelativeForm({
         <div className="adder-body">
           {role === "child" && partnerships.length > 1 ? (
             <label className="field">
-              Partnership
+              {messages.family.partnership}
               <select value={partnershipId} onChange={(event) => setPartnershipId(event.target.value)}>
                 {partnerships.map((partnership) => (
                   <option key={partnership.id} value={partnership.id}>
@@ -577,23 +579,23 @@ function RelativeForm({
           ) : null}
 
           {candidates.length > 0 ? (
-            <div className="segmented" role="group" aria-label={`${title} source`}>
+            <div className="segmented" role="group" aria-label={messages.family.sourceFor(title)}>
               <button type="button" aria-pressed={mode === "new"} onClick={() => setMode("new")}>
-                New person
+                {messages.family.newPerson}
               </button>
               <button type="button" aria-pressed={mode === "existing"} onClick={() => setMode("existing")}>
-                In this tree
+                {messages.family.inTree}
               </button>
             </div>
           ) : null}
 
           {mode === "existing" && candidates.length > 0 ? (
             <label className="field">
-              Person
+              {messages.family.person}
               <select value={existingId} onChange={(event) => setExistingId(event.target.value)}>
                 {candidates.map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
-                    {personMenuLabel(candidate)}
+                    {personOption(candidate, messages)}
                   </option>
                 ))}
               </select>
@@ -601,7 +603,7 @@ function RelativeForm({
           ) : (
             <>
               <label className="field" htmlFor={`${formId}-given`}>
-                Given name
+                {messages.profile.givenName}
                 <input
                   id={`${formId}-given`}
                   value={givenName}
@@ -610,7 +612,7 @@ function RelativeForm({
                 />
               </label>
               <label className="field" htmlFor={`${formId}-family`}>
-                Family name
+                {messages.profile.familyName}
                 <input
                   id={`${formId}-family`}
                   value={familyName}

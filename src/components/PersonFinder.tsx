@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { describeRelation, searchPeople } from "@/model/find";
-import { personMenuLabel } from "@/model/tree";
+import { formatConnection, personOption } from "@/i18n/format";
+import { useI18n } from "@/i18n/I18nProvider";
+import { connection, searchPeople } from "@/model/find";
 import type { TreeDocument } from "@/model/types";
 
 export function PersonFinder({
@@ -16,9 +17,11 @@ export function PersonFinder({
 }) {
   const [query, setQuery] = useState("");
   const [otherId, setOtherId] = useState("");
+  const { messages } = useI18n();
   const matches = searchPeople(document, query);
   const others = document.people.filter((person) => person.id !== focusId);
-  const relation = otherId && otherId !== focusId ? describeRelation(document, focusId, otherId) : null;
+  const relation =
+    otherId && otherId !== focusId ? formatConnection(document, connection(document, focusId, otherId), messages) : null;
 
   useEffect(() => {
     if (otherId === focusId) setOtherId("");
@@ -26,13 +29,13 @@ export function PersonFinder({
 
   return (
     <section className="finder">
-      <h3>Find</h3>
+      <h3>{messages.finder.title}</h3>
       <label className="field">
-        Name
+        {messages.finder.name}
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search names"
+          placeholder={messages.finder.placeholder}
           autoComplete="off"
         />
       </label>
@@ -42,23 +45,23 @@ export function PersonFinder({
             {matches.map((person) => (
               <li key={person.id}>
                 <button type="button" className="person-link" onClick={() => onFocus(person.id)}>
-                  {personMenuLabel(person)}
+                  {personOption(person, messages)}
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="hint">No one matches that name.</p>
+          <p className="hint">{messages.finder.noMatch}</p>
         )
       ) : null}
       {others.length > 0 ? (
         <label className="field">
-          How they connect
+          {messages.finder.how}
           <select value={otherId} onChange={(event) => setOtherId(event.target.value)}>
-            <option value="">Choose a person</option>
+            <option value="">{messages.finder.choose}</option>
             {others.map((person) => (
               <option key={person.id} value={person.id}>
-                {personMenuLabel(person)}
+                {personOption(person, messages)}
               </option>
             ))}
           </select>

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import { Fraunces, Noto_Sans_Bengali, Outfit } from "next/font/google";
 import type { ReactNode } from "react";
+import { I18nProvider } from "@/i18n/I18nProvider";
+import { bn } from "@/i18n/bn";
+import { en } from "@/i18n/en";
+import { readLocale } from "@/i18n/serverLocale";
 import "./globals.css";
 
 const sans = Outfit({
@@ -15,15 +19,27 @@ const display = Fraunces({
   variable: "--font-display",
 });
 
-export const metadata: Metadata = {
-  title: "Family tree",
-  description: "Build a family tree, follow ancestors and descendants, and share a view-only link.",
-};
+const bengali = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  display: "swap",
+  variable: "--font-bengali",
+});
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export async function generateMetadata(): Promise<Metadata> {
+  const messages = (await readLocale()) === "bn" ? bn : en;
+  return {
+    title: messages.appName,
+    description: messages.meta.description,
+  };
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await readLocale();
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable}`}>
-      <body>{children}</body>
+    <html lang={locale} className={`${sans.variable} ${display.variable} ${bengali.variable}`}>
+      <body>
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }
