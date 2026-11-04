@@ -7,17 +7,26 @@ const MIN_PT_PER_PIXEL = 0.36;
 const PAGE_WIDTH = 841.89;
 const PAGE_HEIGHT = 595.28;
 const PAGE_MARGIN = 28;
+const PAGE_HEADER = 54;
 const PAGE_FOOTER = 36;
+const LOGO_SRC = "/family-tree-logo.png";
+const WATERMARK_ALPHA = 0.14;
 
 export async function downloadTreeImage(tree: TreeDocument, title: string): Promise<void> {
   const canvas = await rasterizeTree(tree, title);
-  saveBlob(await canvasBlob(canvas, "image/png"), `${fileSlug(title)}.png`);
+  const framed = frameTree(canvas, await loadLogo());
+  saveBlob(await canvasBlob(framed, "image/png"), `${fileSlug(title)}.png`);
 }
 
 export async function downloadTreePdf(tree: TreeDocument, title: string): Promise<void> {
   const canvas = await rasterizeTree(tree, title);
   const slices = await pageSlices(canvas);
-  const pdf = buildPdf(slices, title.trim() || "Family tree", slices[0]?.ptPerPixel ?? MAX_PT_PER_PIXEL);
+  const pdf = buildPdf(
+    slices,
+    title.trim() || "Family tree",
+    slices[0]?.ptPerPixel ?? MAX_PT_PER_PIXEL,
+    await logoPlate(await loadLogo()),
+  );
   saveBlob(new Blob([copyBytes(pdf)], { type: "application/pdf" }), `${fileSlug(title)}.pdf`);
 }
 
@@ -38,6 +47,62 @@ async function rasterizeTree(tree: TreeDocument, title: string): Promise<HTMLCan
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+function frameTree(source: HTMLCanvasElement, logo: HTMLImageElement | null): HTMLCanvasElement {
+  const margin = Math.max(28, Math.round(source.width * 0.035));
+  const header = logo ? margin + 76 : margin;
+  const framed = window.document.createElement("canvas");
+  framed.width = source.width + margin * 2;
+  framed.height = source.height + header + margin;
+  const context = framed.getContext("2d");
+  if (!context) return source;
+  context.fillStyle = "#f3efe6";
+  context.fillRect(0, 0, framed.width, framed.height);
+  context.drawImage(source, margin, header);
+  if (!logo) return framed;
+  const logoSize = 64;
+  context.drawImage(logo, margin, (header - logoSize) / 2, logoSize, logoSize);
+  context.fillStyle = "#ddd4c6";
+  context.fillRect(margin, header - 10, source.width, 1);
+  const mark = Math.min(source.width, source.height) * 0.42;
+  context.save();
+  context.globalAlpha = WATERMARK_ALPHA;
+  context.drawImage(logo, margin + (source.width - mark) / 2, header + (source.height - mark) / 2, mark, mark);
+  context.restore();
+  return framed;
+}
+
+async function loadLogo(): Promise<HTMLImageElement | null> {
+  try {
+    return await loadImage(LOGO_SRC);
+  } catch {
+    return null;
+  }
+}
+
+type LogoPlate = { rgb: Uint8Array; alpha: Uint8Array; size: number };
+
+async function logoPlate(logo: HTMLImageElement | null): Promise<LogoPlate | null> {
+  if (!logo) return null;
+  const size = 240;
+  const canvas = window.document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (!context || typeof context.getImageData !== "function") return null;
+  context.clearRect(0, 0, size, size);
+  context.drawImage(logo, 0, 0, size, size);
+  const pixels = context.getImageData(0, 0, size, size).data;
+  const rgb = new Uint8Array(size * size * 3);
+  const alpha = new Uint8Array(size * size);
+  for (let index = 0; index < size * size; index += 1) {
+    rgb[index * 3] = pixels[index * 4] ?? 0;
+    rgb[index * 3 + 1] = pixels[index * 4 + 1] ?? 0;
+    rgb[index * 3 + 2] = pixels[index * 4 + 2] ?? 0;
+    alpha[index] = pixels[index * 4 + 3] ?? 0;
+  }
+  return { rgb, alpha, size };
 }
 
 function treeSvg(tree: TreeDocument, title: string): Picture | null {
@@ -129,7 +194,7 @@ async function drawPhotos(context: CanvasRenderingContext2D, tree: TreeDocument,
 
 async function pageSlices(canvas: HTMLCanvasElement): Promise<PageSlice[]> {
   const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-  const contentHeight = PAGE_HEIGHT - PAGE_MARGIN - PAGE_FOOTER;
+  const contentHeight = PAGE_HEIGHT - PAGE_HEADER - PAGE_FOOTER;
   const fit = Math.min(contentWidth / canvas.width, contentHeight / canvas.height);
   const ptPerPixel = Math.min(MAX_PT_PER_PIXEL, Math.max(fit, MIN_PT_PER_PIXEL));
   const tileWidth = Math.floor(contentWidth / ptPerPixel);
@@ -158,44 +223,37 @@ async function pageSlices(canvas: HTMLCanvasElement): Promise<PageSlice[]> {
 
 type PageSlice = { jpeg: Uint8Array; width: number; height: number; ptPerPixel: number };
 
-function buildPdf(slices: PageSlice[], title: string, ptPerPixel: number): Uint8Array {
+function buildPdf(slices: PageSlice[], title: string, ptPerPixel: number, logo: LogoPlate | null): Uint8Array {
+  const firstPage = logo ? 7 : 4;
   const objects: PdfObject[] = [
     { head: "<< /Type /Catalog /Pages 2 0 R >>" },
     {
-      head: `<< /Type /Pages /Kids [${slices.map((_, index) => `${4 + index * 3} 0 R`).join(" ")}] /Count ${slices.length} >>`,
+      head: `<< /Type /Pages /Kids [${slices.map((_, index) => `${firstPage + index * 3} 0 R`).join(" ")}] /Count ${slices.length} >>`,
     },
     { head: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" },
   ];
+  if (logo) {
+    objects[3] = { head: `<< /Type /ExtGState /ca ${WATERMARK_ALPHA} /CA ${WATERMARK_ALPHA} >>` };
+    objects[4] = {
+      head: `<< /Type /XObject /Subtype /Image /Width ${logo.size} /Height ${logo.size} /ColorSpace /DeviceGray /BitsPerComponent 8 /Length ${logo.alpha.length} >>`,
+      stream: logo.alpha,
+    };
+    objects[5] = {
+      head: `<< /Type /XObject /Subtype /Image /Width ${logo.size} /Height ${logo.size} /ColorSpace /DeviceRGB /BitsPerComponent 8 /SMask 5 0 R /Length ${logo.rgb.length} >>`,
+      stream: logo.rgb,
+    };
+  }
   slices.forEach((slice, index) => {
-    const pageId = 4 + index * 3;
+    const pageId = firstPage + index * 3;
     const contentId = pageId + 1;
     const imageId = pageId + 2;
-    const drawWidth = slice.width * ptPerPixel;
-    const drawHeight = slice.height * ptPerPixel;
-    const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-    const contentTop = PAGE_HEIGHT - PAGE_MARGIN;
-    const contentHeight = contentTop - PAGE_FOOTER;
-    const single = slices.length === 1;
-    const x = single ? PAGE_MARGIN + Math.max(0, (contentWidth - drawWidth) / 2) : PAGE_MARGIN;
-    const imageTop = single ? contentTop - Math.max(0, (contentHeight - drawHeight) / 2) : contentTop;
-    const y = imageTop - drawHeight;
-    const label = pdfText(`${title}  ·  ${index + 1} / ${slices.length}`);
-    const content = [
-      "0.953 0.937 0.902 rg",
-      `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT} re f`,
-      "q",
-      `${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm`,
-      `/Im${index} Do`,
-      "Q",
-      "BT",
-      "/F1 9 Tf",
-      "0.137 0.259 0.216 rg",
-      `28 18 Td (${label}) Tj`,
-      "ET",
-    ].join("\n");
-    const stream = new TextEncoder().encode(content);
+    const stream = new TextEncoder().encode(pageContent(slice, index, slices.length, title, ptPerPixel, logo !== null));
+    const xobjects = logo
+      ? `/XObject << /Im${index} ${imageId} 0 R /Logo 6 0 R >>`
+      : `/XObject << /Im${index} ${imageId} 0 R >>`;
+    const states = logo ? " /ExtGState << /GS1 4 0 R >>" : "";
     objects[pageId - 1] = {
-      head: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R >> /XObject << /Im${index} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+      head: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R >>${states} ${xobjects} >> /Contents ${contentId} 0 R >>`,
     };
     objects[contentId - 1] = { head: `<< /Length ${stream.length} >>`, stream };
     objects[imageId - 1] = {
@@ -204,6 +262,57 @@ function buildPdf(slices: PageSlice[], title: string, ptPerPixel: number): Uint8
     };
   });
   return encodePdf(objects);
+}
+
+function pageContent(
+  slice: PageSlice,
+  index: number,
+  count: number,
+  title: string,
+  ptPerPixel: number,
+  logo: boolean,
+): string {
+  const drawWidth = slice.width * ptPerPixel;
+  const drawHeight = slice.height * ptPerPixel;
+  const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
+  const contentTop = PAGE_HEIGHT - PAGE_HEADER;
+  const contentHeight = contentTop - PAGE_FOOTER;
+  const single = count === 1;
+  const x = single ? PAGE_MARGIN + Math.max(0, (contentWidth - drawWidth) / 2) : PAGE_MARGIN;
+  const imageTop = single ? contentTop - Math.max(0, (contentHeight - drawHeight) / 2) : contentTop;
+  const y = imageTop - drawHeight;
+  const label = pdfText(`${title}  ·  ${index + 1} / ${count}`);
+  const mark = Math.min(contentWidth, contentHeight) * 0.42;
+  const markX = PAGE_MARGIN + (contentWidth - mark) / 2;
+  const markY = PAGE_FOOTER + (contentHeight - mark) / 2;
+  const lines = [
+    "0.953 0.937 0.902 rg",
+    `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT} re f`,
+    "q",
+    `${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm`,
+    `/Im${index} Do`,
+    "Q",
+  ];
+  if (logo) {
+    const logoSize = 28;
+    const logoY = PAGE_HEIGHT - PAGE_HEADER + (PAGE_HEADER - logoSize) / 2;
+    lines.push(
+      "q",
+      "/GS1 gs",
+      `${mark.toFixed(2)} 0 0 ${mark.toFixed(2)} ${markX.toFixed(2)} ${markY.toFixed(2)} cm`,
+      "/Logo Do",
+      "Q",
+      "q",
+      `${logoSize} 0 0 ${logoSize} 28 ${logoY.toFixed(2)} cm`,
+      "/Logo Do",
+      "Q",
+      "0.867 0.831 0.776 RG",
+      "0.6 w",
+      `28 ${PAGE_HEIGHT - PAGE_HEADER} m ${PAGE_WIDTH - 28} ${PAGE_HEIGHT - PAGE_HEADER} l S`,
+    );
+  }
+  lines.push("BT", "/F1 9 Tf", "0.137 0.259 0.216 rg", `28 18 Td (${label}) Tj`, "ET");
+  return lines.join("\n");
 }
 
 type PdfObject = { head: string; stream?: Uint8Array };

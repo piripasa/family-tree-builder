@@ -114,6 +114,59 @@ describe("picture export", () => {
     expect(text).toContain("Ada & Ann \\(1\\)");
   });
 
+  it("puts the logo in the header and a faint watermark on the PDF", async () => {
+    installBrowser();
+    vi.stubGlobal("window", {
+      document: {
+        createElement: (tag: string) => {
+          if (tag === "a") {
+            return {
+              href: "",
+              download: "",
+              click(this: { download: string }) {
+                downloads.push(this.download);
+              },
+            };
+          }
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => ({
+              drawImage() {},
+              fillRect() {},
+              clearRect() {},
+              save() {},
+              restore() {},
+              beginPath() {},
+              arc() {},
+              clip() {},
+              fillStyle: "",
+              getImageData: () => ({ data: new Uint8ClampedArray(240 * 240 * 4).fill(255) }),
+            }),
+            toBlob(callback: (blob: Blob | null) => void, type: string) {
+              const bytes = type === "image/jpeg" ? new Uint8Array([0xff, 0xd8, 0xff, 0xd9]) : new Uint8Array([137, 80, 78, 71]);
+              callback(new Blob([bytes], { type }));
+            },
+          };
+        },
+      },
+    });
+    const started = addFirstPerson(
+      { version: 1, people: [], partnerships: [], focusId: null },
+      "Ada",
+      "Lovelace",
+    );
+    if (!started.ok) throw new Error(started.error);
+    await downloadTreePdf(started.document, "Lovelace side");
+    const pdf = blobs.find((blob) => blob.type === "application/pdf");
+    const text = new TextDecoder().decode(new Uint8Array(await pdf!.arrayBuffer()));
+    expect(text).toContain("/SMask 5 0 R");
+    expect(text).toContain("/ca 0.14");
+    expect(text).toContain("/Logo Do");
+    expect(text).toContain("/GS1 gs");
+    expect(text).toContain("Lovelace side");
+  });
+
   it("reports a canvas that cannot encode the picture", async () => {
     installBrowser();
     vi.stubGlobal("window", {
