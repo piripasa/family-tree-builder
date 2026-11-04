@@ -12,7 +12,10 @@ export function isHiddenOnShare(person: Person): boolean {
     person.deathPlace === undefined &&
     person.note === undefined &&
     person.living === undefined &&
-    person.gender === undefined
+    person.gender === undefined &&
+    person.email === undefined &&
+    person.phone === undefined &&
+    person.socials === undefined
   );
 }
 
@@ -21,9 +24,11 @@ export function sharedTree(document: TreeDocument): TreeDocument {
     ...document,
     people: document.people.map((person) => {
       if (isAlive(person)) return { id: person.id, givenName: "Living", familyName: "" };
-      if (!person.sources) return person;
       const next = { ...person };
       delete next.sources;
+      delete next.email;
+      delete next.phone;
+      delete next.socials;
       return next;
     }),
     partnerships: document.partnerships.map((partnership) => {

@@ -198,6 +198,34 @@ describe("mergePeople", () => {
     expect(must(mergePeople(blank, "keep", "drop")).people[0]?.gender).toBe("other");
   });
 
+  it("keeps this record's contact and adds links only the other record has", () => {
+    const doc = family(
+      [
+        person("keep", "Dana", {
+          email: "dana@example.com",
+          socials: [{ network: "x", url: "https://x.com/dana" }],
+        }),
+        person("drop", "D.", {
+          email: "other@example.com",
+          phone: "+351",
+          socials: [
+            { network: "x", url: "https://x.com/dana" },
+            { network: "website", url: "https://dana.example" },
+          ],
+        }),
+      ],
+      [],
+    );
+    expect(must(mergePeople(doc, "keep", "drop")).people[0]).toMatchObject({
+      email: "dana@example.com",
+      phone: "+351",
+      socials: [
+        { network: "x", url: "https://x.com/dana" },
+        { network: "website", url: "https://dana.example" },
+      ],
+    });
+  });
+
   it("fills living from the other record only when this record does not say", () => {
     const unmarked = family(
       [person("keep", "Dana"), person("drop", "D.", { living: true })],

@@ -1,6 +1,6 @@
 import { parseFactSources } from "./source";
 import { createsAncestorCycle } from "./tree";
-import type { Partnership, Person, TreeDocument } from "./types";
+import { isSocialNetwork, SOCIAL_LIMIT, type Partnership, type Person, type SocialLink, type TreeDocument } from "./types";
 
 export type ParseResult =
   | { ok: true; document: TreeDocument }
@@ -151,6 +151,15 @@ function readProfile(
   const photo = optionalPhoto(entry.photo);
   if (typeof photo !== "string") return photo;
   if (photo) fields.photo = photo;
+  const email = optionalContact(entry.email, "An email in that file is unreadable.", "An email in that file is too long.", 200);
+  if (typeof email !== "string") return email;
+  if (email) fields.email = email;
+  const phone = optionalContact(entry.phone, "A phone number in that file is unreadable.", "A phone number in that file is too long.", 40);
+  if (typeof phone !== "string") return phone;
+  if (phone) fields.phone = phone;
+  const socials = readSocials(entry.socials);
+  if (!Array.isArray(socials)) return socials;
+  if (socials.length > 0) fields.socials = socials;
   if (entry.gender !== undefined && entry.gender !== "") {
     if (entry.gender !== "male" && entry.gender !== "female" && entry.gender !== "other") {
       return fail("A gender in that file is unreadable.");
@@ -171,6 +180,39 @@ function readProfile(
     fields.sources = sources.sources;
   }
   return { ok: true, fields };
+}
+
+function readSocials(value: unknown): SocialLink[] | ParseResult {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > SOCIAL_LIMIT) {
+    return fail("A social link in that file is unreadable.");
+  }
+  const links: SocialLink[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.network !== "string" || !isSocialNetwork(item.network)) {
+      return fail("A social link in that file is unreadable.");
+    }
+    const url = optionalText(item.url, "social link", 300);
+    if (typeof url !== "string") return url;
+    if (!url || seen.has(url)) return fail("A social link in that file is unreadable.");
+    seen.add(url);
+    links.push({ network: item.network, url });
+  }
+  return links;
+}
+
+function optionalContact(
+  value: unknown,
+  unreadable: string,
+  tooLong: string,
+  max: number,
+): string | ParseResult {
+  if (value === undefined || value === "") return "";
+  if (typeof value !== "string") return fail(unreadable);
+  const trimmed = value.trim();
+  if (trimmed.length > max) return fail(tooLong);
+  return trimmed;
 }
 
 function optionalDate(value: unknown, label: string): string | ParseResult {

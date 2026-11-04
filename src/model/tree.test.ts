@@ -95,6 +95,25 @@ describe("people", () => {
     expect(named(female, "Ada").gender).toBe("female");
     const cleared = updatePerson(female, id, { gender: undefined });
     expect(named(cleared, "Ada").gender).toBeUndefined();
+
+    const reached = updatePerson(cleared, id, {
+      email: " ada@example.com ",
+      phone: " +44 20 ",
+      socials: [
+        { network: "instagram", url: " https://instagram.com/ada " },
+        { network: "facebook", url: " " },
+        { network: "instagram", url: "https://instagram.com/ada" },
+      ],
+    });
+    expect(named(reached, "Ada")).toMatchObject({
+      email: "ada@example.com",
+      phone: "+44 20",
+      socials: [{ network: "instagram", url: "https://instagram.com/ada" }],
+    });
+    const unreached = updatePerson(reached, id, { email: " ", phone: "", socials: [] });
+    expect(named(unreached, "Ada").email).toBeUndefined();
+    expect(named(unreached, "Ada").phone).toBeUndefined();
+    expect(named(unreached, "Ada").socials).toBeUndefined();
   });
 
   it("ignores a focus or a patch for someone who is missing", () => {

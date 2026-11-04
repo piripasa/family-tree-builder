@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { PersonPortrait } from "@/components/PersonPortrait";
 import { PersonFinder } from "@/components/PersonFinder";
 import { SourceEditor } from "@/components/SourceEditor";
 import { coupleLabel, personName, personOption } from "@/i18n/format";
@@ -18,7 +19,7 @@ import {
   partnershipsAsPartner,
   partnersOf,
 } from "@/model/tree";
-import type { Person, RelativeSource, TreeDocument } from "@/model/types";
+import { SOCIAL_LIMIT, SOCIAL_NETWORKS, type Person, type RelativeSource, type SocialNetwork, type TreeDocument } from "@/model/types";
 
 type Role = "parent" | "partner" | "child";
 type PanelTab = "profile" | "family" | "sources" | "people" | "record" | "suggestions";
@@ -63,9 +64,14 @@ export function EditorPanel({
   const { locale, messages } = useI18n();
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [tab, setTab] = useState<PanelTab>("profile");
+  const [socialDraft, setSocialDraft] = useState<{ network: SocialNetwork; url: string }>({
+    network: "facebook",
+    url: "",
+  });
 
   useEffect(() => {
     setPhotoError(null);
+    setSocialDraft({ network: "facebook", url: "" });
   }, [person?.id]);
 
   useEffect(() => {
@@ -141,14 +147,8 @@ export function EditorPanel({
         <>
         <div className="profile-identity">
           <div className="photo-slot">
-            <label className={person.photo ? "photo-preview" : "photo-preview empty"}>
-              {person.photo ? (
-                <img src={person.photo} alt="" />
-              ) : (
-                <svg className="photo-plus" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M8 3v10M3 8h10" />
-                </svg>
-              )}
+            <label className="photo-preview">
+              <PersonPortrait person={person} size={52} />
               <input
                 type="file"
                 accept="image/*"
@@ -270,6 +270,121 @@ export function EditorPanel({
           )}
         </div>
         {datesInverted ? <p className="hint">{messages.profile.datesInverted}</p> : null}
+        <section className="contact">
+          <p className="contact-title">{messages.profile.contact}</p>
+          <label className="field">
+            {messages.profile.email}
+            <input
+              type="email"
+              maxLength={200}
+              autoComplete="off"
+              value={person.email ?? ""}
+              onChange={(event) => onUpdate(person.id, { email: event.target.value })}
+            />
+          </label>
+          <label className="field">
+            {messages.profile.phone}
+            <input
+              type="tel"
+              maxLength={40}
+              autoComplete="off"
+              value={person.phone ?? ""}
+              onChange={(event) => onUpdate(person.id, { phone: event.target.value })}
+            />
+          </label>
+          {(person.socials ?? []).map((social, index) => (
+            <div className="social-row" key={`${social.network}-${index}`}>
+              <label className="field">
+                {messages.profile.link}
+                <select
+                  value={social.network}
+                  onChange={(event) => {
+                    const socials = (person.socials ?? []).map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, network: event.target.value as SocialNetwork } : item,
+                    );
+                    onUpdate(person.id, { socials });
+                  }}
+                >
+                  {SOCIAL_NETWORKS.map((network) => (
+                    <option key={network} value={network}>
+                      {messages.profile.socials[network]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <input
+                  aria-label={messages.profile.link}
+                  maxLength={300}
+                  autoComplete="off"
+                  value={social.url}
+                  onChange={(event) => {
+                    const socials = (person.socials ?? []).map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, url: event.target.value } : item,
+                    );
+                    onUpdate(person.id, { socials });
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="social-remove"
+                aria-label={messages.profile.removeLink}
+                onClick={() => {
+                  const socials = (person.socials ?? []).filter((_, itemIndex) => itemIndex !== index);
+                  onUpdate(person.id, { socials });
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {(person.socials?.length ?? 0) < SOCIAL_LIMIT ? (
+            <>
+              <div className="social-row draft">
+                <label className="field">
+                  {messages.profile.link}
+                  <select
+                    value={socialDraft.network}
+                    onChange={(event) =>
+                      setSocialDraft((draft) => ({ ...draft, network: event.target.value as SocialNetwork }))
+                    }
+                  >
+                    {SOCIAL_NETWORKS.map((network) => (
+                      <option key={network} value={network}>
+                        {messages.profile.socials[network]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <input
+                    aria-label={messages.profile.link}
+                    maxLength={300}
+                    autoComplete="off"
+                    placeholder="https://"
+                    value={socialDraft.url}
+                    onChange={(event) => setSocialDraft((draft) => ({ ...draft, url: event.target.value }))}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = socialDraft.url.trim();
+                  if (!url) return;
+                  onUpdate(person.id, {
+                    socials: [...(person.socials ?? []), { network: socialDraft.network, url }],
+                  });
+                  setSocialDraft({ network: "facebook", url: "" });
+                }}
+                disabled={!socialDraft.url.trim()}
+              >
+                {messages.profile.addLink}
+              </button>
+            </>
+          ) : null}
+        </section>
         <label className="field">
           {messages.profile.note}
           <textarea

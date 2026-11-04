@@ -6,7 +6,19 @@ import {
   parentsOf,
   partnershipsAsPartner,
 } from "./tree";
-import type { Person, TreeDocument } from "./types";
+import type { Person, SocialNetwork, TreeDocument } from "./types";
+
+const SOCIAL_LABELS: Record<SocialNetwork, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  x: "X",
+  youtube: "YouTube",
+  linkedin: "LinkedIn",
+  tiktok: "TikTok",
+  whatsapp: "WhatsApp",
+  website: "Website",
+  other: "Other",
+};
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -120,6 +132,11 @@ function factLines(document: TreeDocument, person: Person, summary: boolean): st
   const died = eventLine("Died", person.deathDate, person.deathPlace);
   if (died) lines.push(died);
   if (isAlive(person)) lines.push("Living.");
+  if (person.email?.trim()) lines.push(`Email: ${person.email.trim()}`);
+  if (person.phone?.trim()) lines.push(`Phone: ${person.phone.trim()}`);
+  for (const social of person.socials ?? []) {
+    lines.push(`${SOCIAL_LABELS[social.network]}: ${social.url}`);
+  }
   if (person.note?.trim()) lines.push(`Note: ${person.note.trim()}`);
   for (const partnership of partnershipsAsPartner(document, person.id)) {
     if (partnership.partnerIds.length < 2) continue;

@@ -161,6 +161,44 @@ describe("parseTreeDocument", () => {
       ),
     ).toMatchObject({ ok: false, error: "That would make someone their own ancestor." });
   });
+
+  it("reads contact and rejects a social link it cannot read", () => {
+    const parsed = parseTreeDocument(
+      sample({
+        people: [
+          {
+            id: "ada",
+            givenName: "Ada",
+            familyName: "Lovelace",
+            email: " ada@example.com ",
+            phone: "+44 20",
+            socials: [{ network: "youtube", url: "https://youtube.com/@ada" }],
+          },
+          { id: "ann", givenName: "Ann", familyName: "King" },
+        ],
+      }),
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.document.people[0]).toMatchObject({
+      email: "ada@example.com",
+      phone: "+44 20",
+      socials: [{ network: "youtube", url: "https://youtube.com/@ada" }],
+    });
+    const bad = parseTreeDocument(
+      sample({
+        people: [
+          {
+            id: "ada",
+            givenName: "Ada",
+            familyName: "Lovelace",
+            socials: [{ network: "myspace", url: "https://example.com" }],
+          },
+          { id: "ann", givenName: "Ann", familyName: "King" },
+        ],
+      }),
+    );
+    expect(bad).toEqual({ ok: false, error: "A social link in that file is unreadable." });
+  });
 });
 
 describe("downloadTree", () => {

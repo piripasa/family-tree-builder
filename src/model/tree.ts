@@ -1,9 +1,12 @@
-import type {
-  Partnership,
-  Person,
-  RelativeSource,
-  TreeDocument,
-  TreeResult,
+import {
+  isSocialNetwork,
+  SOCIAL_LIMIT,
+  type Partnership,
+  type Person,
+  type RelativeSource,
+  type SocialLink,
+  type TreeDocument,
+  type TreeResult,
 } from "./types";
 
 export function createEmptyDocument(): TreeDocument {
@@ -448,7 +451,30 @@ function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): P
   }
   if (!next.photo) delete next.photo;
   if (next.gender !== "male" && next.gender !== "female" && next.gender !== "other") delete next.gender;
+  const email = next.email?.trim().slice(0, 200) ?? "";
+  if (email) next.email = email;
+  else delete next.email;
+  const phone = next.phone?.trim().slice(0, 40) ?? "";
+  if (phone) next.phone = phone;
+  else delete next.phone;
+  const socials = cleanSocials(next.socials);
+  if (socials.length > 0) next.socials = socials;
+  else delete next.socials;
   return next;
+}
+
+export function cleanSocials(value: SocialLink[] | undefined): SocialLink[] {
+  const links: SocialLink[] = [];
+  const seen = new Set<string>();
+  for (const item of value ?? []) {
+    if (!item || !isSocialNetwork(item.network)) continue;
+    const url = item.url?.trim().slice(0, 300) ?? "";
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    links.push({ network: item.network, url });
+    if (links.length >= SOCIAL_LIMIT) break;
+  }
+  return links;
 }
 
 function yearOf(value: string | undefined): string {

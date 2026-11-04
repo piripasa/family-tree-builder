@@ -15,6 +15,9 @@ const family: TreeDocument = {
       deathDate: "1852-11-27",
       deathPlace: "Marylebone",
       note: "Kept (the) stories",
+      email: "ada@example.com",
+      phone: "+44 20",
+      socials: [{ network: "website", url: "https://ada.example" }],
     },
     { id: "ann", givenName: "Ann", familyName: "King", birthDate: "1788-01-01", living: true },
     { id: "byron", givenName: "George", familyName: "Byron", deathDate: "1824-04-19" },
@@ -48,6 +51,9 @@ describe("written report", () => {
     expect(text.startsWith("Lovelace side\nAncestors and descendants of Ada Lovelace\nAda Lovelace\n")).toBe(true);
     expect(text).toContain("Born 1815-12-10 in London");
     expect(text).toContain("Died 1852-11-27 in Marylebone");
+    expect(text).toContain("Email: ada@example.com");
+    expect(text).toContain("Phone: +44 20");
+    expect(text).toContain("Website: https://ada.example");
     expect(text).toContain("Note: Kept (the) stories");
     expect(text).toContain("With William King. Married 1835-07-08.");
     expect(text).toContain("Parents: Ann King and George Byron.");

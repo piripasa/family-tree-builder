@@ -1,4 +1,5 @@
 import { CARD_HEIGHT, CARD_WIDTH, layoutTree } from "./layout";
+import { avatarMarkup, portraitKind } from "./portrait";
 import { displayName, getPerson, lifeSpan } from "./tree";
 import type { TreeDocument } from "./types";
 
@@ -123,13 +124,15 @@ function treeSvg(tree: TreeDocument, title: string): Picture | null {
     const family = person.familyName.trim();
     const given = person.givenName.trim() || "Unnamed";
     const span = lifeSpan(person);
-    const textX = person.photo ? 56 : 16;
+    const kind = portraitKind(person);
+    const textX = 56;
     const stroke = card.isFocus ? `stroke="#234237" stroke-width="2.5"` : `stroke="#ddd4c6" stroke-width="1.5"`;
-    const photo = person.photo
-      ? `<circle cx="28" cy="${CARD_HEIGHT / 2}" r="16" fill="#e7e0d4"/>`
-      : "";
+    const photo =
+      kind === "photo"
+        ? `<circle cx="28" cy="${CARD_HEIGHT / 2}" r="16" fill="#e7e0d4"/>`
+        : `<g transform="translate(12 ${CARD_HEIGHT / 2 - 16})">${avatarMarkup(kind)}</g>`;
     const familyText = family
-      ? `<text x="${textX}" y="${span ? 48 : 58}" fill="#6f675c" font-size="13" font-family="Palatino, Georgia, serif">${xml(truncate(family, person.photo ? 16 : 22))}</text>`
+      ? `<text x="${textX}" y="${span ? 48 : 58}" fill="#6f675c" font-size="13" font-family="Palatino, Georgia, serif">${xml(truncate(family, 16))}</text>`
       : "";
     const spanText = span
       ? `<text x="${textX}" y="72" fill="#6f675c" font-size="13" font-family="Palatino, Georgia, serif">${xml(span)}</text>`
@@ -140,7 +143,7 @@ function treeSvg(tree: TreeDocument, title: string): Picture | null {
     const hiddenDown = card.hiddenDown
       ? `<circle cx="${CARD_WIDTH / 2}" cy="${CARD_HEIGHT + 8}" r="3.5" fill="#234237"/>`
       : "";
-    return `<g transform="translate(${card.x} ${card.y})"><rect width="${card.width}" height="${card.height}" rx="12" fill="#fffdf8" ${stroke}/>${photo}<text x="${textX}" y="${span ? 28 : family ? 36 : 50}" fill="#1e1a14" font-size="16" font-family="Palatino, Georgia, serif">${xml(truncate(given, person.photo ? 13 : 18))}</text>${familyText}${spanText}${hiddenUp}${hiddenDown}</g>`;
+    return `<g transform="translate(${card.x} ${card.y})"><rect width="${card.width}" height="${card.height}" rx="12" fill="#fffdf8" ${stroke}/>${photo}<text x="${textX}" y="${span ? 28 : family ? 36 : 50}" fill="#1e1a14" font-size="16" font-family="Palatino, Georgia, serif">${xml(truncate(given, 13))}</text>${familyText}${spanText}${hiddenUp}${hiddenDown}</g>`;
   });
   const lines = layout.lines
     .map((line) => {

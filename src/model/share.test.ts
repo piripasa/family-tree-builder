@@ -29,6 +29,9 @@ describe("sharedTree", () => {
           familyName: "King",
           deathDate: "1837-01-01",
           living: false,
+          email: "ann@example.com",
+          phone: "+44",
+          socials: [{ network: "website", url: "https://ann.example" }],
         },
       ],
       partnerships: [{ id: "parents", partnerIds: ["ada"], childIds: ["ann"] }],
@@ -36,7 +39,13 @@ describe("sharedTree", () => {
     const shared = sharedTree(document);
     expect(shared.people[0]).toEqual({ id: "ada", givenName: "Living", familyName: "" });
     expect(shared.people[1]).toEqual(document.people[1]);
-    expect(shared.people[2]).toEqual(document.people[2]);
+    expect(shared.people[2]).toEqual({
+      id: "ann",
+      givenName: "Ann",
+      familyName: "King",
+      deathDate: "1837-01-01",
+      living: false,
+    });
     expect(shared.partnerships).toEqual(document.partnerships);
     expect(shared.focusId).toBe("ada");
   });

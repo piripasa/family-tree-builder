@@ -1,5 +1,14 @@
 import { parseTreeDocument, type ParseResult } from "./io";
-import type { FactSource, Partnership, Person, SourceKind, TreeDocument } from "./types";
+import {
+  isSocialNetwork,
+  SOCIAL_LIMIT,
+  type FactSource,
+  type Partnership,
+  type Person,
+  type SocialLink,
+  type SourceKind,
+  type TreeDocument,
+} from "./types";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 
@@ -35,6 +44,12 @@ export function exportGedcom(document: TreeDocument): string {
       writeEvent(lines, "DEAT", person.deathDate, person.deathPlace, person.sources, "death");
     } else if (person.living === false) writeValue(lines, 1, "DEAT", "Y");
     if (person.note?.trim()) writeValue(lines, 1, "NOTE", person.note.trim());
+    if (person.email?.trim()) writeValue(lines, 1, "EMAIL", person.email.trim());
+    if (person.phone?.trim()) writeValue(lines, 1, "PHON", person.phone.trim());
+    for (const social of person.socials ?? []) {
+      writeValue(lines, 1, "WWW", social.url);
+      writeValue(lines, 2, "TYPE", social.network);
+    }
     for (const partnership of document.partnerships) {
       const family = familyId(document, partnership.id);
       if (partnership.partnerIds.includes(person.id)) lines.push(`1 FAMS ${family}`);
@@ -98,6 +113,12 @@ export function parseGedcom(text: string): ParseResult {
     if (sex === "M") person.gender = "male";
     else if (sex === "F") person.gender = "female";
     else if (sex === "X") person.gender = "other";
+    const email = textOf(findChild(individual, "EMAIL")).trim().slice(0, 200);
+    if (email) person.email = email;
+    const phone = textOf(findChild(individual, "PHON")).trim().slice(0, 40);
+    if (phone) person.phone = phone;
+    const socials = readSocials(individual);
+    if (socials.length > 0) person.socials = socials;
     if (death.present || (markedAlive && death.date)) person.living = false;
     else if (markedAlive) person.living = true;
     built.push(person);
@@ -237,6 +258,21 @@ function parseLine(row: string): { level: number; xref?: string; tag: string; va
   const match = row.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?([A-Za-z0-9_]+)(?:\s(.*))?$/);
   if (!match) return null;
   return { level: Number(match[1]), xref: match[2], tag: match[3].toUpperCase(), value: match[4] ?? "" };
+}
+
+function readSocials(individual: GedNode): SocialLink[] {
+  const links: SocialLink[] = [];
+  const seen = new Set<string>();
+  for (const child of individual.children) {
+    if (child.tag !== "WWW") continue;
+    const url = textOf(child).trim().slice(0, 300);
+    if (!url || seen.has(url)) continue;
+    const type = textOf(findChild(child, "TYPE")).trim().toLowerCase();
+    seen.add(url);
+    links.push({ network: isSocialNetwork(type) ? type : "website", url });
+    if (links.length >= SOCIAL_LIMIT) break;
+  }
+  return links;
 }
 
 function findChild(node: GedNode, tag: string): GedNode | undefined {

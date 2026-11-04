@@ -11,11 +11,39 @@ export type FactSource = {
 
 export type Gender = "male" | "female" | "other";
 
+export const SOCIAL_NETWORKS = [
+  "facebook",
+  "instagram",
+  "x",
+  "youtube",
+  "linkedin",
+  "tiktok",
+  "whatsapp",
+  "website",
+  "other",
+] as const;
+
+export type SocialNetwork = (typeof SOCIAL_NETWORKS)[number];
+
+export type SocialLink = {
+  network: SocialNetwork;
+  url: string;
+};
+
+export const SOCIAL_LIMIT = 8;
+
+export function isSocialNetwork(value: string): value is SocialNetwork {
+  return (SOCIAL_NETWORKS as readonly string[]).includes(value);
+}
+
 export type Person = {
   id: string;
   givenName: string;
   familyName: string;
   gender?: Gender;
+  email?: string;
+  phone?: string;
+  socials?: SocialLink[];
   photo?: string;
   birthDate?: string;
   birthPlace?: string;

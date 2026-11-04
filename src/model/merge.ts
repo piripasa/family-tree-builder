@@ -1,4 +1,4 @@
-import { createsAncestorCycle, getPerson, isDescendant, parentPartnershipOf } from "./tree";
+import { cleanSocials, createsAncestorCycle, getPerson, isDescendant, parentPartnershipOf } from "./tree";
 import type { Partnership, Person, TreeDocument, TreeResult } from "./types";
 
 type TaggedPartnership = Partnership & { preferred: boolean };
@@ -144,6 +144,12 @@ function mergedPerson(keep: Person, drop: Person): Person {
   if (photo) next.photo = photo;
   const gender = keep.gender ?? drop.gender;
   if (gender) next.gender = gender;
+  const email = clip(filled(keep.email, drop.email), 200);
+  const phone = clip(filled(keep.phone, drop.phone), 40);
+  const socials = cleanSocials([...(keep.socials ?? []), ...(drop.socials ?? [])]);
+  if (email) next.email = email;
+  if (phone) next.phone = phone;
+  if (socials.length > 0) next.socials = socials;
   if (deathDate) next.living = false;
   else if (keep.living === true || keep.living === false) next.living = keep.living;
   else if (drop.living === true || drop.living === false) next.living = drop.living;

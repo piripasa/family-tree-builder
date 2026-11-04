@@ -924,6 +924,99 @@ button:focus-visible,
   fill: var(--muted);
 }
 
+.person-tip {
+  position: absolute;
+  z-index: 4;
+  width: max-content;
+  max-width: 16.5rem;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: #fffdf8;
+  color: var(--ink);
+  box-shadow: 0 10px 24px rgba(48, 36, 18, 0.12);
+  pointer-events: none;
+}
+
+.person-tip.above {
+  transform: translate(-50%, -100%);
+}
+
+.person-tip.below {
+  transform: translate(-50%, 0);
+}
+
+.person-tip.left {
+  transform: translate(-100%, 0);
+}
+
+.tip-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.person-tip strong {
+  display: block;
+  font-family: var(--font-display), var(--font-bengali), Palatino, Georgia, serif;
+  font-size: 0.98rem;
+  font-weight: 560;
+}
+
+.portrait {
+  display: block;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.portrait img,
+.portrait svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.person-card image,
+.person-card svg svg {
+  pointer-events: none;
+}
+
+.person-tip .tip-alive {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.person-tip dl {
+  margin: 0.4rem 0 0;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.person-tip dl div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.35rem 0.55rem;
+  align-items: baseline;
+}
+
+.person-tip dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.person-tip dd {
+  margin: 0;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .profile-identity {
   display: grid;
   grid-template-columns: 3.25rem minmax(0, 1fr) minmax(0, 1fr);
@@ -1022,6 +1115,39 @@ button:focus-visible,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
+}
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.contact-title {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.social-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: end;
+}
+
+.social-row .field:first-child {
+  grid-column: 1 / -1;
+}
+
+.social-row.draft {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.social-remove {
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
 }
 
 .field textarea {

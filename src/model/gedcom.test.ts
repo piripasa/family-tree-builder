@@ -155,6 +155,38 @@ describe("gedcom", () => {
     if (!unknown.ok) throw new Error(unknown.error);
     expect(unknown.document.people[0]?.gender).toBeUndefined();
   });
+
+  it("round-trips email, phone, and web links", () => {
+    const gedcom = exportGedcom({
+      version: 1,
+      focusId: "ada",
+      people: [
+        {
+          id: "ada",
+          givenName: "Ada",
+          familyName: "Lovelace",
+          email: "ada@example.com",
+          phone: "+44 20",
+          socials: [{ network: "instagram", url: "https://instagram.com/ada" }],
+        },
+      ],
+      partnerships: [],
+    });
+    expect(gedcom).toContain("1 EMAIL ada@@example.com");
+    expect(gedcom).toContain("1 PHON +44 20");
+    expect(gedcom).toContain("1 WWW https://instagram.com/ada");
+    expect(gedcom).toContain("2 TYPE instagram");
+    const parsed = parseGedcom(gedcom);
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.document.people[0]).toMatchObject({
+      email: "ada@example.com",
+      phone: "+44 20",
+      socials: [{ network: "instagram", url: "https://instagram.com/ada" }],
+    });
+    const bare = parseGedcom("0 HEAD\n0 @I1@ INDI\n1 NAME Ada /Lovelace/\n1 WWW https://ada.example\n0 TRLR\n");
+    if (!bare.ok) throw new Error(bare.error);
+    expect(bare.document.people[0]?.socials).toEqual([{ network: "website", url: "https://ada.example" }]);
+  });
 });
 
 describe("downloadGedcom", () => {
