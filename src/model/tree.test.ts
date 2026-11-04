@@ -90,6 +90,11 @@ describe("people", () => {
 
     const unmarked = updatePerson(alive, id, { living: false });
     expect(named(unmarked, "Ada").living).toBe(false);
+
+    const female = updatePerson(unmarked, id, { gender: "female" });
+    expect(named(female, "Ada").gender).toBe("female");
+    const cleared = updatePerson(female, id, { gender: undefined });
+    expect(named(cleared, "Ada").gender).toBeUndefined();
   });
 
   it("ignores a focus or a patch for someone who is missing", () => {

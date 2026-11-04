@@ -37,6 +37,7 @@ describe("parseTreeDocument", () => {
             deathPlace: "Marylebone",
             note: " Mathematician ",
             photo: "data:image/jpeg;base64,abc",
+            gender: "female",
             living: true,
           },
           { id: "ann", givenName: "Ann", familyName: "King", living: false },
@@ -50,6 +51,7 @@ describe("parseTreeDocument", () => {
       deathDate: "1852-11-27",
       note: "Mathematician",
       photo: "data:image/jpeg;base64,abc",
+      gender: "female",
       living: false,
     });
     expect(parsed.document.people[1].living).toBe(false);
@@ -126,6 +128,7 @@ describe("parseTreeDocument", () => {
     [sample({ people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", photo: "http://photo" }] }), "A photo in that file is unreadable."],
     [sample({ people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", photo: `data:image/jpeg;${"a".repeat(1_500_000)}` }] }), "A photo in that file is too large."],
     [sample({ people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", living: "yes" }] }), "A living flag in that file is unreadable."],
+    [sample({ people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", gender: "unknown" }] }), "A gender in that file is unreadable."],
   ])("rejects %j", (input, error) => {
     expect(parseTreeDocument(input)).toEqual({ ok: false, error });
   });

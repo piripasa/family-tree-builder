@@ -9,10 +9,13 @@ export type FactSource = {
   detail: string;
 };
 
+export type Gender = "male" | "female" | "other";
+
 export type Person = {
   id: string;
   givenName: string;
   familyName: string;
+  gender?: Gender;
   photo?: string;
   birthDate?: string;
   birthPlace?: string;

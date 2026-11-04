@@ -151,6 +151,12 @@ function readProfile(
   const photo = optionalPhoto(entry.photo);
   if (typeof photo !== "string") return photo;
   if (photo) fields.photo = photo;
+  if (entry.gender !== undefined && entry.gender !== "") {
+    if (entry.gender !== "male" && entry.gender !== "female" && entry.gender !== "other") {
+      return fail("A gender in that file is unreadable.");
+    }
+    fields.gender = entry.gender;
+  }
   if (entry.living !== undefined && typeof entry.living !== "boolean") {
     return fail("A living flag in that file is unreadable.");
   }

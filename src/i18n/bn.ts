@@ -109,6 +109,10 @@ export const bn: Messages = {
   profile: {
     givenName: "নাম",
     familyName: "পদবি",
+    gender: "লিঙ্গ",
+    male: "পুরুষ",
+    female: "নারী",
+    other: "অন্যান্য",
     alive: "জীবিত",
     aliveHint: "শেয়ার লিংকে জীবিত চিহ্নিত মানুষ শুধু জীবিত হিসেবে দেখা যান।",
     changePhoto: "ছবি বদলান",

@@ -11,7 +11,8 @@ export function isHiddenOnShare(person: Person): boolean {
     person.deathDate === undefined &&
     person.deathPlace === undefined &&
     person.note === undefined &&
-    person.living === undefined
+    person.living === undefined &&
+    person.gender === undefined
   );
 }
 

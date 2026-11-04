@@ -24,6 +24,9 @@ export function exportGedcom(document: TreeDocument): string {
     const id = ids.get(person.id);
     lines.push(`0 ${id} INDI`);
     writeValue(lines, 1, "NAME", `${person.givenName.trim()} /${person.familyName.trim().replaceAll("/", "")}/`);
+    if (person.gender === "male") writeValue(lines, 1, "SEX", "M");
+    else if (person.gender === "female") writeValue(lines, 1, "SEX", "F");
+    else if (person.gender === "other") writeValue(lines, 1, "SEX", "X");
     writeFactSources(lines, 2, person.sources, "name");
     writeEvent(lines, "BIRT", person.birthDate, person.birthPlace, person.sources, "birth");
     if (person.living === true && !person.deathDate) writeValue(lines, 1, "_LIV", "Y");
@@ -91,6 +94,10 @@ export function parseGedcom(text: string): ParseResult {
     if (sources.length > 0) person.sources = sources;
     const note = textOf(findChild(individual, "NOTE")).trim().slice(0, 2000);
     if (note) person.note = note;
+    const sex = textOf(findChild(individual, "SEX")).trim().toUpperCase();
+    if (sex === "M") person.gender = "male";
+    else if (sex === "F") person.gender = "female";
+    else if (sex === "X") person.gender = "other";
     if (death.present || (markedAlive && death.date)) person.living = false;
     else if (markedAlive) person.living = true;
     built.push(person);

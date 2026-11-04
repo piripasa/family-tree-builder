@@ -188,6 +188,16 @@ describe("mergePeople", () => {
     expect(must(mergePeople(long, "keep", "drop")).people[0]?.note).toBe("A".repeat(1500));
   });
 
+  it("keeps this record's gender and fills one only when this record does not say", () => {
+    const stated = family(
+      [person("keep", "Dana", { gender: "female" }), person("drop", "D.", { gender: "male" })],
+      [],
+    );
+    expect(must(mergePeople(stated, "keep", "drop")).people[0]?.gender).toBe("female");
+    const blank = family([person("keep", "Dana"), person("drop", "D.", { gender: "other" })], []);
+    expect(must(mergePeople(blank, "keep", "drop")).people[0]?.gender).toBe("other");
+  });
+
   it("fills living from the other record only when this record does not say", () => {
     const unmarked = family(
       [person("keep", "Dana"), person("drop", "D.", { living: true })],

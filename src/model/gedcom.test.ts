@@ -35,6 +35,7 @@ describe("gedcom", () => {
     expect(gedcom.trimEnd().endsWith("0 TRLR")).toBe(true);
     expect(gedcom.split("\n").every((line) => line.length <= 255)).toBe(true);
     expect(gedcom).toContain("1 NAME Ada /Lovelace/");
+    expect(gedcom).not.toContain("1 SEX");
     expect(gedcom).toContain("2 DATE 10 DEC 1815");
     expect(gedcom).toContain("2 DATE 1815-13-01");
     expect(gedcom).toContain("1 MARR");
@@ -130,6 +131,29 @@ describe("gedcom", () => {
     expect(parsed.document.people[0].deathDate).toBeUndefined();
     expect(parsed.document.people[0].deathPlace).toBe("London");
     expect(parsed.document.people[0].living).toBe(false);
+  });
+
+  it("round-trips male, female, and other", () => {
+    const sexes = [
+      ["male", "M"],
+      ["female", "F"],
+      ["other", "X"],
+    ] as const;
+    for (const [gender, code] of sexes) {
+      const gedcom = exportGedcom({
+        version: 1,
+        focusId: "ada",
+        people: [{ id: "ada", givenName: "Ada", familyName: "Lovelace", gender }],
+        partnerships: [],
+      });
+      expect(gedcom).toContain(`1 SEX ${code}`);
+      const parsed = parseGedcom(gedcom);
+      if (!parsed.ok) throw new Error(parsed.error);
+      expect(parsed.document.people[0]?.gender).toBe(gender);
+    }
+    const unknown = parseGedcom("0 HEAD\n0 @I1@ INDI\n1 NAME Ada /Lovelace/\n1 SEX U\n0 TRLR\n");
+    if (!unknown.ok) throw new Error(unknown.error);
+    expect(unknown.document.people[0]?.gender).toBeUndefined();
   });
 });
 

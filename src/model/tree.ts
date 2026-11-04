@@ -447,6 +447,7 @@ function applyPersonPatch(person: Person, patch: Partial<Omit<Person, "id">>): P
     else delete next[key];
   }
   if (!next.photo) delete next.photo;
+  if (next.gender !== "male" && next.gender !== "female" && next.gender !== "other") delete next.gender;
   return next;
 }
 

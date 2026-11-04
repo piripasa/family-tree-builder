@@ -102,6 +102,10 @@ export const en = {
   profile: {
     givenName: "Given name",
     familyName: "Family name",
+    gender: "Gender",
+    male: "Male",
+    female: "Female",
+    other: "Other",
     alive: "Alive",
     aliveHint: "A share link shows someone marked alive only as Living.",
     changePhoto: "Change photo",

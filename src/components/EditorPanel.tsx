@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { PersonFinder } from "@/components/PersonFinder";
 import { SourceEditor } from "@/components/SourceEditor";
 import { coupleLabel, personName, personOption } from "@/i18n/format";
@@ -139,45 +139,20 @@ export function EditorPanel({
 
         {tab === "profile" ? (
         <>
-        <label className="field">
-          {messages.profile.givenName}
-          <input
-            value={person.givenName}
-            onChange={(event) => onUpdate(person.id, { givenName: event.target.value })}
-            autoComplete="off"
-          />
-        </label>
-        <label className="field">
-          {messages.profile.familyName}
-          <input
-            value={person.familyName}
-            onChange={(event) => onUpdate(person.id, { familyName: event.target.value })}
-            autoComplete="off"
-          />
-        </label>
-
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={alive}
-            onChange={(event) => onUpdate(person.id, { living: event.target.checked })}
-          />
-          {messages.profile.alive}
-        </label>
-        <p className="hint">{messages.profile.aliveHint}</p>
-
-        <div className="photo-row">
-          {person.photo ? (
-            <img className="photo-preview" src={person.photo} alt="" />
-          ) : (
-            <div className="photo-preview empty" aria-hidden="true" />
-          )}
-          <div className="photo-actions">
-            <label className="file-button">
-              {person.photo ? messages.profile.changePhoto : messages.profile.addPhoto}
+        <div className="profile-identity">
+          <div className="photo-slot">
+            <label className={person.photo ? "photo-preview" : "photo-preview empty"}>
+              {person.photo ? (
+                <img src={person.photo} alt="" />
+              ) : (
+                <svg className="photo-plus" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 3v10M3 8h10" />
+                </svg>
+              )}
               <input
                 type="file"
                 accept="image/*"
+                aria-label={person.photo ? messages.profile.changePhoto : messages.profile.addPhoto}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
@@ -195,12 +170,61 @@ export function EditorPanel({
               />
             </label>
             {person.photo ? (
-              <button type="button" onClick={() => onUpdate(person.id, { photo: "" })}>
-                {messages.profile.removePhoto}
+              <button
+                type="button"
+                className="photo-remove"
+                aria-label={messages.profile.removePhoto}
+                onClick={() => onUpdate(person.id, { photo: "" })}
+              >
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M3 3l6 6M9 3L3 9" />
+                </svg>
               </button>
             ) : null}
           </div>
+          <label className="field">
+            {messages.profile.givenName}
+            <input
+              value={person.givenName}
+              onChange={(event) => onUpdate(person.id, { givenName: event.target.value })}
+              autoComplete="off"
+            />
+          </label>
+          <label className="field">
+            {messages.profile.familyName}
+            <input
+              value={person.familyName}
+              onChange={(event) => onUpdate(person.id, { familyName: event.target.value })}
+              autoComplete="off"
+            />
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={alive}
+              onChange={(event) => onUpdate(person.id, { living: event.target.checked })}
+            />
+            {messages.profile.alive}
+          </label>
         </div>
+        <p className="hint">{messages.profile.aliveHint}</p>
+        <fieldset className="gender-field">
+          <legend>{messages.profile.gender}</legend>
+          <div className="gender-options">
+            {(["male", "female", "other"] as const).map((gender) => (
+              <label key={gender} className="check">
+                <input
+                  type="radio"
+                  name={`gender-${person.id}`}
+                  value={gender}
+                  checked={person.gender === gender}
+                  onChange={() => onUpdate(person.id, { gender })}
+                />
+                {messages.profile[gender]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         {photoError ? (
           <p className="message" role="alert">
             {translateError(locale, photoError)}
@@ -294,9 +318,8 @@ export function EditorPanel({
             </fieldset>
           ))}
 
-        {parents.length >= 2 ? (
-          <p className="hint">{messages.family.twoParents}</p>
-        ) : (
+        {parents.length >= 2 ? <p className="hint">{messages.family.twoParents}</p> : null}
+        <div className="relative-actions">
           <RelativeForm
             key={`parent-${person.id}`}
             title={messages.family.addParent}
@@ -304,30 +327,31 @@ export function EditorPanel({
             document={document}
             personId={person.id}
             partnerships={[]}
+            disabled={parents.length >= 2}
             onSubmit={(source) => onAddParent(source)}
           />
-        )}
-        <RelativeForm
-          key={`partner-${person.id}`}
-          title={messages.family.addPartner}
-          role="partner"
-          document={document}
-          personId={person.id}
-          partnerships={[]}
-          onSubmit={(source) => onAddPartner(source)}
-        />
-        <RelativeForm
-          key={`child-${person.id}`}
-          title={messages.family.addChild}
-          role="child"
-          document={document}
-          personId={person.id}
-          partnerships={partnerships.map((partnership) => ({
-            id: partnership.id,
-            label: coupleLabel(document, partnership, person.id, messages),
-          }))}
-          onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
-        />
+          <RelativeForm
+            key={`partner-${person.id}`}
+            title={messages.family.addPartner}
+            role="partner"
+            document={document}
+            personId={person.id}
+            partnerships={[]}
+            onSubmit={(source) => onAddPartner(source)}
+          />
+          <RelativeForm
+            key={`child-${person.id}`}
+            title={messages.family.addChild}
+            role="child"
+            document={document}
+            personId={person.id}
+            partnerships={partnerships.map((partnership) => ({
+              id: partnership.id,
+              label: coupleLabel(document, partnership, person.id, messages),
+            }))}
+            onSubmit={(source, partnershipId) => onAddChild(source, partnershipId)}
+          />
+        </div>
         </>
         ) : null}
 
@@ -508,6 +532,7 @@ function RelativeForm({
   document,
   personId,
   partnerships,
+  disabled = false,
   onSubmit,
 }: {
   title: string;
@@ -515,10 +540,12 @@ function RelativeForm({
   document: TreeDocument;
   personId: string;
   partnerships: { id: string; label: string }[];
+  disabled?: boolean;
   onSubmit: (source: RelativeSource, partnershipId?: string) => boolean;
 }) {
   const { messages } = useI18n();
   const formId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [givenName, setGivenName] = useState("");
@@ -538,6 +565,20 @@ function RelativeForm({
       setPartnershipId(partnerships[0]?.id ?? "");
     }
   }, [partnerships, partnershipId]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLElement>("input, select")?.focus();
+    }
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+  }
 
   function submit() {
     const source: RelativeSource =
@@ -559,12 +600,29 @@ function RelativeForm({
         type="button"
         className="adder-toggle"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="dialog"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
       >
         {title}
       </button>
-      {open ? (
-        <div className="adder-body">
+      <dialog
+        ref={dialogRef}
+        className="account-dialog"
+        aria-labelledby={`${formId}-title`}
+        onClose={close}
+        onClick={(event) => {
+          if (event.target === dialogRef.current) dialogRef.current?.close();
+        }}
+      >
+        <form
+          className="account-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <h2 id={`${formId}-title`}>{title}</h2>
           {role === "child" && partnerships.length > 1 ? (
             <label className="field">
               {messages.family.partnership}
@@ -622,11 +680,16 @@ function RelativeForm({
               </label>
             </>
           )}
-          <button type="button" className="primary" onClick={submit}>
-            {title}
-          </button>
-        </div>
-      ) : null}
+          <div className="account-actions">
+            <button type="submit" className="primary">
+              {title}
+            </button>
+            <button type="button" onClick={() => dialogRef.current?.close()}>
+              {messages.cancel}
+            </button>
+          </div>
+        </form>
+      </dialog>
     </section>
   );
 }

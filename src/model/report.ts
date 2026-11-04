@@ -112,6 +112,9 @@ function relativeGenerations(document: TreeDocument, startId: string, direction:
 
 function factLines(document: TreeDocument, person: Person, summary: boolean): string[] {
   const lines: string[] = [];
+  if (person.gender === "male") lines.push("Male.");
+  else if (person.gender === "female") lines.push("Female.");
+  else if (person.gender === "other") lines.push("Other.");
   const born = eventLine("Born", person.birthDate, person.birthPlace);
   if (born) lines.push(born);
   const died = eventLine("Died", person.deathDate, person.deathPlace);

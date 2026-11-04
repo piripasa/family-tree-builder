@@ -102,6 +102,7 @@ const bnText: Record<string, string> = {
   "That file points at someone who is missing.": "এই ফাইল এমন কাউকে দেখাচ্ছে যাঁকে পাওয়া যাচ্ছে না।",
   "A marriage source in that file needs both partners.": "এই ফাইলে একটি বিয়ের উৎসের দুইজন সঙ্গী লাগে।",
   "A living flag in that file is unreadable.": "এই ফাইলে জীবিত চিহ্ন পড়া যাচ্ছে না।",
+  "A gender in that file is unreadable.": "এই ফাইলে লিঙ্গ পড়া যাচ্ছে না।",
   "A living person in that file has a death source.": "এই ফাইলে একজন জীবিত মানুষের মৃত্যুর উৎস আছে।",
   "A photo in that file is unreadable.": "এই ফাইলে একটি ছবি পড়া যাচ্ছে না।",
   "A photo in that file is too large.": "এই ফাইলে একটি ছবি অনেক বড়।",

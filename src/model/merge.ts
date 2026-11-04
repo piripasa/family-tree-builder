@@ -142,6 +142,8 @@ function mergedPerson(keep: Person, drop: Person): Person {
   if (deathPlace) next.deathPlace = deathPlace;
   if (note) next.note = note;
   if (photo) next.photo = photo;
+  const gender = keep.gender ?? drop.gender;
+  if (gender) next.gender = gender;
   if (deathDate) next.living = false;
   else if (keep.living === true || keep.living === false) next.living = keep.living;
   else if (drop.living === true || drop.living === false) next.living = drop.living;
